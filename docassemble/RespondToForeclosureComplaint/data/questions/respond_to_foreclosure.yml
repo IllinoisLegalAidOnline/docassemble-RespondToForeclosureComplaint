@@ -1,0 +1,2888 @@
+ metadata:
+  title: Respond to a mortgage foreclosure complaint
+  short title: Respond to foreclosure
+  comment: This program makes the forms to respond to a mortgage foreclosure complaint.
+  authors:
+    - Vivian McNaughton
+    - Matt Newsted
+---
+include:
+  - docassemble.AssemblyLine:assembly_line.yml
+  - docassemble.ALToolbox:phone-number-validation.yml
+  - docassemble.ILAO:ilao-interview-framework.yml
+  - docassemble.ILAO:shared-basic-questions.yml
+---
+objects:
+  - users: ALPeopleList.using(there_are_any=True, complete_attribute=['complete'])
+  - users[i].lawyer: ALIndividual
+  - users[i].hand_delivery_address: ALAddress
+  - users[i].regular_mail: ALAddress
+  - users[i].third_party: ALIndividual
+  - signing_users: ALPeopleList.using(there_are_any=True)
+  - other_parties: ALPeopleList.using(there_are_any=True)
+  - other_parties[i].lawyer: ALIndividual
+  - other_parties[i].hand_delivery_address: ALAddress
+  - other_parties[i].regular_mail: ALAddress
+  - other_parties[i].third_party: ALIndividual
+  - foreclosure_property: ALAddress
+  - counselor: ALIndividual
+  - delivery_parties: ALPeopleList.using(there_are_any=True)
+  - delivery_parties[i].lawyer: ALIndividual
+  - answer_responses: DAList.using(object_type=DAObject, complete_attribute=['complete'], there_are_any=True)
+  - defenses: DAList.using(object_type=Thing, complete_attribute='complete', there_are_any=True)
+  - claims: DAList.using(object_type=Thing, complete_attribute='complete', there_are_any=True)
+  - court_list: ALCourtLoader.using(file_name='docassemble.ILAO:data/sources/il_courts.xlsx')
+---
+code: |
+  ilao_easy_form_title = "Respond to a foreclosure"
+  ilao_easy_form_url = "https://www.illinoislegalaid.org/legal-information/respond-mortgage-foreclosure-complaint"
+  github_user = 'IllinoisLegalAidOnline'
+  github_repo_name = 'docassemble-RespondToForeclosureComplaint'
+  allowed_courts = ['Circuit']
+  user_ask_role = 'defendant'
+  al_form_type = 'existing_case'
+  form_name = "Mortgage Foreclosure Appearance and Answer"
+---
+# Road map
+sections:
+  - section_intro: Start
+  - section_case_info: Case info
+  - section_answer: Responses
+  - section_defenses: Affirmative defenses
+  - section_delivery: Delivery details
+  - section_about_you: About you
+  - section_download: Download  
+---
+# interview order block
+mandatory: True
+code: |
+  nav.set_section('section_intro')
+  sees_nav_bar
+  snapshot_start
+  how_to_use
+  set_progress(5)
+  whats_next
+  accept_terms
+  lawsuit_information
+  challenge_service
+  more_lawsuit_information
+  
+  if not complaint_received:
+    received_kickout
+  if more_than_thirty_days:
+    thirty_days_kickout
+  
+  nav.set_section('section_case_info')
+  users.gather()
+  other_parties.gather()
+  deliver_to_parties
+  if in_re_check == True:
+    in_re_label
+  trial_court
+  case_number
+  foreclosure_property.address
+  working_with_lender
+  approved_modification
+  if housing_counselor:
+    counselor_company
+    counselor.name.first
+    
+  nav.set_section('section_answer')
+  answer_intro
+  illinois_law_note
+  #The complaint_labeled variable is currently set to always be true because the mortgage forclosure answer form does not have fields for unlabeled complaint responses.
+  complaint_labeled = True
+  if complaint_labeled:
+    answer_responses.gather()
+    if answer_responses.number() == 45:
+      max_paragraphs
+  else:
+    unlabeled_intro
+    unlabeled_admit
+    unlabeled_idk
+  
+  nav.set_section('section_defenses')
+  defenses_intro 
+  #The following three questions are only asked to check whether to run the defense_legal_help continue button field page. This is holdover behavior from the LHI version of this program. I have also added a code block that creates a default answer for defenses_description including any assorted_defenses checkboxes marked as True.
+  if assorted_defenses.any_true():
+    defense_legal_help
+  set_has_defenses
+  if has_defenses:
+    defenses_description
+    preview_defenses
+    if add_defenses_page:
+      additional_defenses_description
+      preview_additional_defenses
+    
+  nav.set_section('section_delivery')
+  delivery_intro
+  for person in delivery_parties:
+    if person.is_represented == True:
+      person.lawyer.name.first
+    person.address.address
+    if person.knows_delivery_method:
+      person.mail_delivery
+      person.delivery_date
+  hand_delivery_info   
+  
+  nav.set_section('section_about_you')
+  users[0].address.address
+  users[0].has_email_address
+  pronouns_none
+  prefix_none
+  e_signature
+
+  set_progress(100)
+  nav.set_section('section_download')
+  forms_assembling
+  make_signer_list
+  refresh_signatures_bundle
+  refresh_delivery_bundle
+  snapshot_forms
+  #specific_debug
+  get_docs_screen
+--- 
+#user gather loop
+code: |
+  users[i].name.first
+  if i > 0:
+    if users[i].fully_agree:
+      users[i].need_signature
+      users[i].address.address
+      users[i].phone_number
+    else:
+      users[i].will_need_copy
+  users[i].complete = True
+---
+reconsider: True
+code: |
+  signing_users.clear()
+  for index, user in enumerate(users):
+    if index > 0:
+      if user.fully_agree:
+        signing_users.append(user)
+    else:
+      signing_users.append(user)
+  signing_users.there_is_another = False
+  make_signer_list = True
+---
+#other parties gather loop
+code: |
+  other_parties.name.first
+  other_parties[i].complete = True
+---
+code: |
+  stuff_to_snapshot = {
+  	'start_time': str(current_datetime().format_datetime()),
+  	'started_interview': True, 
+  	}
+
+  try:
+    stuff_to_snapshot['ip_address'] = device(ip=True)
+  except:
+    pass
+
+  stuff_to_snapshot['zip'] = showifdef('users[0].address.zip')
+
+  stuff_to_snapshot['downloaded_forms'] = showifdef('forms_assembling')
+  
+  store_variables_snapshot(
+  	data=stuff_to_snapshot, persistent=True
+  	)
+  snapshot_interview_state = True
+---
+code: |
+  snapshot_interview_state
+  snapshot_start = True  
+---
+code: |
+  reconsider('snapshot_interview_state')
+  snapshot_forms = True
+---
+id: welcome
+question: |
+  Respond to a mortgage foreclosure complaint
+subquestion: |
+  Welcome to Illinois Legal Aid Online's **Respond to a foreclosure** Easy Form.
+
+  If you received a Mortgage Foreclosure Complaint, you have been sued. Your Summons either lists a court date or a deadline for filing Appearance and Answer forms. This program helps you respond to a foreclosure lawsuit when the Summons lists a deadline for filing forms. It makes different forms depending on how you want to respond. Some forms are optional.
+  
+  * An *Appearance* tells the court and the other parties that you are participating in the court case.
+  * An *Answer* tells the court and the other parties how you respond to what is written in the Complaint or Petition.
+  * *Affirmative Defenses* tell the court and the other parties why you should win the case even if everything in the Complaint or Petition is true.
+  
+  To learn more, read ILAO's article about [**responding to a mortgage foreclosure case**](https://www.illinoislegalaid.org/legal-information/responding-mortgage-foreclosure-case).
+field: sees_nav_bar
+---
+id: instructions
+continue button field: how_to_use
+question: |
+  Instructions
+subquestion: |
+  To use this program you will need: 
+
+  * The Mortgage Foreclosure Complaint you received,
+  * The Summons that lists the deadline for filing a written response, 
+  * Names and addresses of the other parties, and
+  * Names and addresses of the other parties' lawyers. 
+
+  You can find this information on the court papers you have about this case. 
+
+  Set aside 10 to 20 minutes to finish this program. You can log in and save your work to return to later. 
+ 
+  ${ collapse_template(help_example) }  
+
+  Click on **{green words}** to learn what they mean. Some pages have a question mark in a circle ${ fa_icon("question-circle", color_css="#0dcaf0" ) } that helps explain things.
+---
+template: help_example
+subject: |
+  **You can click sections like this to show more information.**
+content: |  
+  This is an example of help. Click again to hide.
+---
+id: whats next
+continue button field: whats_next
+question: |
+  After you finish this program
+subquestion: |
+  After you download your **{Appearance}**, and **{Answer}** forms, you must file them with the court. This program does not file your forms for you.
+  
+  If you have **{Affirmative Defenses}**, you must file those forms with the court as well.
+  
+  You can also download instructions at the end of this program. The instructions can guide you through filing your forms and going to court.
+---
+terms:
+  - "Jury Request": |
+      A Jury Request tells the court you want a trial with a judge and a jury. It is also called a Jury demand.
+  - "Affirmative Defenses": |
+      Affirmative Defenses tell the court and the other parties why you should win the case even if everything in the Complaint or Petition is true.
+---
+id: lawsuit information
+continue button field: lawsuit_information
+question: |
+  Lawsuit information
+subquestion: |
+  If you received a Mortgage Foreclosure Complaint, you have been sued. You need to tell the court you want to participate in your case. You tell the court you are participating in the case by filing an **Mortage Foreclosure Appearance and Answer**.
+
+  The Summons you received will tell you the deadline for filing your Appearance and Answer. If you do not respond by the deadline, you can be found in default, and the court can rule against you.
+  
+  To learn more, read ILAO's article about [**responding to a mortgage foreclosure case**](https://www.illinoislegalaid.org/legal-information/responding-mortgage-foreclosure-case). 
+  
+  If you would like help finding free or low-cost legal services in your area, use [**Get Legal Help**](https://www.illinoislegalaid.org/get-legal-help).
+---
+id: challenge service
+continue button field: challenge_service
+question: |
+  Think about defenses
+subquestion: |
+  There can be many defenses to a lawsuit. However, a few special defenses must be brought up **before** you file your Answer.
+
+  You need to file a Motion **before** you file your Answer if you want to:
+  
+  * Challenge the way the Complaint was delivered to you, also called service of process, or
+  * Dismiss the Complaint because the lawsuit does not have a legal basis.
+
+  You should talk with a lawyer about whether you have a legal reason to challenge how the Complaint or Petition was received or whether you have a legal reason to have it dismissed. You can also read ILAO's article about a [**Motion to Quash**](https://www.illinoislegalaid.org/node/50146).
+  
+  If you would like help finding free or low-cost legal services in your area, use [**Get Legal Help**](https://www.illinoislegalaid.org/get-legal-help).
+---
+id: more lawsuit information
+continue button field: more_lawsuit_information
+question: |
+  More information about responding to a lawsuit
+subquestion: |
+  There is usually a deadline for filing a response to a lawsuit. If you received a Summons with the Complaint, the Summons should list a deadline for filing your Answer. Answers are often due 30 days after you receive the Summons.
+  
+  If you did not receive a Summons with the Petition or if the Summons does not list a deadline, then the judge will set a deadline at your court date. 
+---
+id: complaint received check
+question: |
+  Did you receive a Mortgage Foreclosure Complaint and Summons to appear in court?
+fields:
+  - no label: complaint_received
+    datatype: yesnoradio
+---
+id: no complaint received kickout
+event: received_kickout
+question: |
+  Sorry
+subquestion: |
+  You cannot use this program unless you received a Mortgage Foreclosure Complaint and Summons.
+  
+  To learn more about avoiding foreclosure, read ILAO's article on [**Avoiding mortgage foreclosure**](https://www.illinoislegalaid.org/legal-information/avoiding-mortgage-foreclosure-0).
+buttons:
+  - Exit: exit
+  - Restart: restart
+---
+id: more than thirty days check
+question: |
+  Has it been more than 30 days since you received the Mortgage Foreclosure Complaint and Summons?
+fields:
+  - no label: more_than_thirty_days
+    datatype: yesnoradio
+---
+id: more than thirty days kickout
+event: thirty_days_kickout
+question: |
+  Sorry
+subquestion: |
+  You must respond to a Mortgage Foreclosure Complaint within 30 days after you were **{properly served}**.
+
+  If you missed this deadline then a default judgment may have been entered against you. You can ask the court to remove the judgment by filing a [**Motion to Vacate Default Judgment of Foreclosure**](https://www.illinoislegalaid.org/legal-information/vacate-default-judgment-foreclosure).
+buttons:
+  - Exit: exit
+  - Restart: restart
+---
+terms:
+  - "properly served": |
+      **Properly Served** means you got the Summons and Complaint in an official way approved by the court. For example, the forms were given to you by the Sheriff or a Special Process Server, or sent via Certified Mail.
+---
+id: deliver to parties
+continue button field: deliver_to_parties
+question: |
+  Delivering forms
+subquestion: |
+  % if other_parties.number_gathered() < 2:
+  You will have to deliver a copy of your forms to ${other_parties[0].name.full(middle='full')} or their lawyer. You will get instructions at the end of this interview.
+  % else:
+  You will have to deliver a copy of your forms to the plaintiffs or their lawyers. You will get instructions at the end of this interview.
+  % endif
+---
+id: other parties there is another
+question: |
+  Is there any other plaintiff or petitioner in this matter?
+subquestion: |
+  % if len(other_parties.elements) >= 1:  
+  So far you have told us about ${comma_and_list(other_parties.complete_elements().full_names())}.
+  % endif
+fields:
+  - no label: other_parties.there_is_another
+    datatype: yesnoradio
+---
+id: in re check
+question: |
+ Does the court case have the words "**In re:**" in the name?
+fields:
+  - no label: in_re_check
+    datatype: yesnoradio
+---
+id: in re label
+question: |
+  What does it say after "**In re:**" on the court papers?
+fields:
+  - In re:: in_re_label
+    maxlength: 50
+---
+id: trial court county
+continue button field: case_county
+question: |
+  In which county was the complaint filed?
+subquestion: |
+  This should be listed near the top on your court papers.
+fields:
+  - no label: trial_court_index
+    datatype: integer
+    code: |
+      court_county_lookup()
+---
+code: |
+  def court_county_lookup(lowercase=False):
+    all_court_counties = court_list._load_courts()['address_county'].items()
+    filtered_courts = [(-1, "cook")] if lowercase else [(-1, "Cook")]
+    for court in all_court_counties:
+      if court[1] != "Cook":
+        court_name = court[1].lower() if lowercase else court[1]
+        filtered_courts.append((court[0],court_name))
+    return sorted( filtered_courts, key=lambda y: y[1])
+---
+depends on:
+  - trial_court_index
+code: |
+  if trial_court_index == -1:
+    trial_court = court_list.as_court('trial_court', 15)
+    trial_court.address.county = "Cook"
+  else:
+    trial_court = court_list.as_court('trial_court', trial_court_index)
+---
+id: case number
+question: |
+  What is the case number?
+subquestion: |
+  ${ collapse_template(case_number_help) }  
+fields:
+  - Case number: case_number
+    maxlength: 19
+---
+template: case_number_help
+subject: |
+  **Where can I find this?**
+content: |  
+  The case number should be on your court papers. Look at the Complaint or Petition, or the Summons if you received one. It is usually in the top-right part of the first page.
+  
+  In this example, the case number is **2022 EXAMPLE 123**.
+  
+  [FILE case_number_example.png, 100%, Summons form showing case number]
+---
+id: foreclosure property address
+question: |
+  What is the address of the property in this foreclosure case?
+fields:
+  - Street address: foreclosure_property.address
+    address autocomplete: True
+  - Address line 2: foreclosure_property.unit
+    required: False
+  - City: foreclosure_property.city
+  - State: foreclosure_property.state
+    code: |
+      states_list() 
+  - ZIP code: foreclosure_property.zip
+---
+id: users fully agree
+question: |
+  Does ${users[i].name.full(middle='full')} fully agree with you and your responses to the foreclosure complaint?
+subquestion: |
+  If ${users[i].name.full(middle='full')} has any other responses or defenses they would put in the response, click **No**.
+fields:
+  - no label: users[i].fully_agree
+    datatype: yesnoradio
+---
+id: users need signature
+continue button field: users[i].need_signature
+question: |
+  ${users[i].name.full(middle='full')} will need to sign the forms before they can be filed.
+---
+id: user will need copy
+continue button field: users[i].will_need_copy
+question: |
+  You will need to provide a copy of your forms to ${users[i].name.full(middle='full')}.
+subquestion: |
+  More instructions on how to do this will be provided later.
+---
+id: working with lender
+question: |
+  Are you working with a lender on getting a loan modification?
+subquestion: |
+  Click **Yes** if you are working with your bank to try to get your mortgage loan changed so that you can keep your house.
+fields:
+  - no label: working_with_lender
+    datatype: yesnoradio
+---
+id: approved modification
+question: |
+  Do you already have an approved loan modification?
+subquestion: |
+  Click **Yes** if the bank has already changed your mortgage loan.
+fields:
+  - no label: approved_modification
+    datatype: yesnoradio
+---
+id: housing counselor check
+question: |  
+  Are you working with a housing counselor?
+subquestion: |
+  Click **Yes** if you are working with a housing counselor to work through your options in this mortgage foreclosure case.
+fields:
+  - no label: housing_counselor
+    datatype: yesnoradio
+---
+id: counselor company
+question: |
+  What is the name of the company or agency that the housing counselor works for?
+fields:
+  - Company or agency name: counselor_company
+---
+id: counselor name
+question: |
+  What is the housing counselor's name?
+fields:
+  - First: counselor.name.first
+  - Middle: counselor.name.middle
+    required: False
+  - Last: counselor.name.last
+  - Suffix: counselor.name.suffix
+    code: |
+      name_suffix()
+    required: False
+---
+id: answer intro
+continue button field: answer_intro
+question: |
+  Respond to statements in the Complaint
+subquestion: |
+  You should respond to every statement in the Complaint. Respond in the order that they appear.
+  
+  If the paragraphs are labeled by number or letter, your responses should be labeled like the statements in the Complaint or Petition.
+
+  Your options are:
+  
+  * **{Admit}**,
+  * **{Deny}**, or
+  * **{Do not know}**.
+  
+  The forms made by this program allow you to respond to up to 45 labeled paragraphs and subparagraphs. If you need to respond to more, download a blank [**Additional Paragraphs for Answer or Response**](https://www.illinoiscourts.gov/documents-and-forms/approved-forms/circuit-forms/answer-response). 
+terms:
+  Admit: |
+    You agree that **all** of the statements in the paragraph are true.
+  Deny: |
+    You disagree with **any** of the statements in the paragraph.
+  Do not know: |
+    You do not know if all of the statements in the paragraph are true or false. This means you do not have enough information to truthfully admit or deny the statements.
+---
+id: illinois law note
+continue button field: illinois_law_note
+question: |
+  Illinois law and Mortgage Forclosure Complaints
+subquestion: |
+  Illinois law says that when you are sued by a Mortgage Foreclosure Complaint, facts such as notices are part of the complaint, even if these facts are not listed in the complaint.
+
+  When you use this Answer, you may be admitting that certain facts are true. For example, you admit that you were given the proper notices about the default on the mortgage.
+---
+id: answer responses
+sets:
+  - answer_responses[i].para
+  - answer_responses[i].sub
+  - answer_responses[i].response
+question: |
+  What is your response to the ${ ordinal(i) } paragraph?
+fields:
+  - Paragraph number: answer_responses[i].para
+    maxlength: 10
+  - Subparagraph letter (optional): answer_responses[i].sub
+    maxlength: 10
+    required: False
+  - Response: answer_responses[i].response
+    input type: radio
+    choices:
+      - Admit: Admit
+        help: |
+          You agree that **all** of the statements in the paragraph are true.
+      - Deny: Deny
+        help: |
+          You disagree with **any** of the statements in the paragraph.
+      - Do not know: Do not know
+        help: |
+          You do not know if all of the statements in the paragraph are true or false. This means you do not have enough information to truthfully admit or deny the statements.
+---
+id: any other paragraphs
+question: |
+  Are there any other paragraphs to respond to?
+subquestion: |
+  % if answer_responses.number() >= 34:
+  **Reminder:** This program can respond to up to 45 paragraphs.
+
+  % endif
+  So far you have responded to paragraphs and subparagraphs:
+  
+  % for paragraph in answer_responses:
+    * ${ paragraph.para + paragraph.sub + " (" + paragraph.response + ")"}
+  % endfor
+fields:
+  - "More paragraphs?": answer_responses.there_is_another
+    datatype: yesnoradio
+---
+code: |
+  answer_responses[i].para
+  answer_responses[i].response
+  answer_responses[i].complete = True
+---
+depends on:
+  - answer_responses
+code: |
+  if answer_responses.number() == 45:
+    answer_responses.there_is_another = False
+---
+id: maximum paragraphs entered
+continue button field: max_paragraphs
+question: |
+  Paragraph limit
+subquestion: |
+  You have reached the maximum number of paragraphs you can respond to with this program. Here is what you entered:
+  
+  % for paragraph in answer_responses:
+    * ${ paragraph.para + paragraph.sub + " (" + paragraph.response + ")"}
+  % endfor
+
+  If you need to respond to more, download a blank [**Additional Paragraphs for Answer or Response**](https://www.illinoiscourts.gov/documents-and-forms/approved-forms/circuit-forms/answer-response).
+---
+id: statements labeled
+question: |
+  Are the statements in the Complaint or Petition labeled?
+subquestion: |
+  In other words, do they have numbers and letters like this:
+  
+  1. Jane Smith, Plaintiff, lives at 123 S. Main Street, Anytown, IL.
+  2. Mary Jones, Defendant, lives at 900 E. Oak Avenue, Anytown, IL.
+  3. On March 3, ${int(format_date(today(), format="yyyy"))-1}, Plaintiff signed a contract with Defendant.
+  [NEWLINE]A. A copy of the contract is attached.
+  [NEWLINE]B. No money was exchanged between the parties when the contract was signed.
+  
+  If they are labeled by number or letter, you can respond to them by each label. If they are not labeled, you can respond to each sentence separately.  
+fields:
+  - Statements labeled?: complaint_labeled
+    datatype: yesnoradio
+---
+id: unlabeled intro
+continue button field: unlabeled_intro
+question: |
+  Deny by default
+subquestion: |  
+  Since the Complaint or Petition you are responding to does not have paragraphs labeled by number or letter, you can respond to each statement one-by one.
+  
+  It is easiest to **{deny}** most statements in the Complaint or Petition, and list only the statements that you **{admit}** are true or **{do not know}** if they are true.
+  
+  The next screens will help you do that.
+terms:
+  admit: |
+    You agree that the statement is true.
+  deny: |
+    You disagree with the statement. It is not true.
+  do not know: |
+    You do not know the statement is true or false. This means you do not have enough information to truthfully admit or deny the statement. 
+---
+id: unableled statements admit
+question: |
+  Which statements in the Complaint or Petition do you admit are true?
+subquestion: |
+  If you know that a statement in the Complaint or Petition is **true**, list it here.
+  
+  On the next screen, you can list the statements that you don't know if they are true or false.
+fields:
+  - Statements you admit are true:: unlabeled_admit
+    input type: area
+    rows: 12
+    maxlength: 600
+    help: |
+      The form has limited space. You can fit more words if you don't break lines with the Enter or Return key. 
+  - Are there more statements you admit are true?: more_admit
+    datatype: yesnoradio
+  - More statements you admit are true:: unlabeled_admit_more
+    input type: area
+    rows: 12
+    maxlength: 600
+    show if:
+      variable: more_admit
+      is: True
+    help: |
+      The form has limited space. You can fit more words if you don't break lines with the Enter or Return key. 
+---
+id: unableled statements idk
+question: |
+  Which statements in the Complaint or Petition do you not know if they are true?
+subquestion: |
+  If you **do not know** if a statement in the Complaint or Petition is true or false, list it here. This includes statements you do not have enough information about.
+fields:
+  - Statements you do not know are true:: unlabeled_idk
+    input type: area
+    rows: 12
+    maxlength: 600
+    help: |
+      The form has limited space. You can fit more words if you don't break lines with the Enter or Return key. 
+  - Are there more statements you do not know are true or false?: more_idk
+    datatype: yesnoradio
+  - More statements you do not know are true:: unlabeled_idk_more
+    input type: area
+    rows: 12
+    maxlength: 600
+    show if:
+      variable: more_idk
+      is: True
+    help: |
+      The form has limited space. You can fit more words if you don't break lines with the Enter or Return key. 
+---
+id: affirmative defenses intro
+continue button field: defenses_intro
+question: |
+  Affirmative defenses
+subquestion: |  
+  Affirmative defenses are reasons why the plaintiff should not win the case even if everything in the Complaint is true.
+  
+  An affirmative defense is not the same as saying "I did nothing wrong." Instead, it is telling the court: "even if you think the plaintiff is right, I should win because I have this defense."
+  
+  For example, a person has a certain amount of time after something happens to file a lawsuit. This is called a statute of limitations. If the plaintiff files a lawsuit after the statute of limitations ran out for their case, you could use this affirmative defense.
+  
+  **Note:** You will have to prove your affirmative defenses in court with evidence such as documents.
+---
+id: assorted defenses check
+question: |
+  Do any of the following defenses apply to your case?
+subquestion: |
+  Select all that apply.
+fields:
+  - "Defenses": assorted_defenses
+    datatype: checkboxes
+    choices:
+      - "My mortgage company wrongfully denied my application for a loan modification.": wrong_deny
+      - "My mortgage company failed to respond to my request for a mortgage modification.": fail_respond
+      - "I had a loan modification application under review with my mortgage company when the foreclosure case was filed.": under_review
+      - "My refinance or home equity loan is less than 3 years old and the lender did not accurately tell me information about the loan's Annual Percentage Rate (APR), finance charge(s), amount financed, total of payments or schedule of payments.": less_than_3
+      - "My broker received an unreasonable lump-sum payment (commission) for brokering the loan.": unreasonable_broker
+      - "A contractor started the loan as part of a home repair contract.": contractor
+      - "I have my own insurance, and the lender has added an insurance premium to my account (force-placed insurance).": forced_insurance
+      - "My lender has not applied all of my payments to my account.": not_applied
+---
+depends on:
+  - assorted_defenses
+code: |
+  default_defenses = ""
+  if assorted_defenses['wrong_deny']:
+    default_defenses += "My mortgage company wrongfully denied my application for a loan modification."
+    default_defenses += "\n"
+  if assorted_defenses['fail_respond']:
+    default_defenses += "My mortgage company failed to respond to my request for a mortgage modification."
+    default_defenses += "\n"
+  if assorted_defenses['under_review']:
+    default_defenses += "I had a loan modification application under review with my mortgage company when the foreclosure case was filed."
+    default_defenses += "\n"
+  if assorted_defenses['less_than_3']:
+    default_defenses += "My refinance or home equity loan is less than 3 years old and the lender did not accurately tell me information about the loan's Annual Percentage Rate (APR), finance charge(s), amount financed, total of payments or schedule of payments."
+    default_defenses += "\n"
+  if assorted_defenses['unreasonable_broker']:
+    default_defenses += "My broker received an unreasonable lump-sum payment (commission) for brokering the loan."
+    default_defenses += "\n"
+  if assorted_defenses['contractor']:
+    default_defenses += "A contractor started the loan as part of a home repair contract."
+    default_defenses += "\n"
+  if assorted_defenses['forced_insurance']:
+    default_defenses += "I have my own insurance, and the lender has added an insurance premium to my account."
+    default_defenses += "\n"
+  if assorted_defenses['not_applied']:
+    default_defenses += "My lender has not applied all of my payments to my account."
+    default_defenses += "\n"
+---
+depends on:
+  - assorted_defenses
+code: |
+  if assorted_defenses.any_true():
+    has_defenses = True
+  else:
+    has_defenses
+  set_has_defenses = True
+---
+id: defense legal help
+continue button field: defense_legal_help
+question: |
+  Foreclosure defenses and legal help
+subquestion: |
+  Since you may have one or more of the defenses listed on the previous screens, you may want to contact an attorney to help you with your case.
+  
+  If you would like help finding free or low-cost legal services in your area, use [**Get Legal Help**](https://www.illinoislegalaid.org/get-legal-help).
+  
+  This does not necessarily mean you have a defense to your mortgage foreclosure case. Also, you might have a defense not listed in the previous screen.
+
+  To learn more about defenses to a mortgage foreclosure, read ILAO's article on [**Legal reasons to throw out a mortgage foreclosure lawsuit**](https://www.illinoislegalaid.org/legal-information/legal-reasons-throw-out-mortgage-foreclosure-lawsuit).
+---
+id: any affirmative defenses
+question: |
+  Do you have any affirmative defenses?
+subquestion: |  
+  You can enter details about your affirmative defenses on the next screen. 
+fields:
+  Any affirmative defenses?: has_defenses
+  datatype: yesnoradio
+---
+mandatory: True
+objects:
+  - watermark: DAStaticFile.using(filename="preview_watermark_text.png")
+---
+id: defenses description
+question: |
+  Describe any defenses you have in your own words. 
+subquestion: |  
+  You must provide facts that support your defenses.
+  
+  If you need more room to explain, you can add an additional page. You can preview how your answer looks on the form on the next screen.
+fields:
+  - label: Defenses
+    field: defenses_description
+    input type: area
+    rows: 5
+    maxlength: 500
+    default: |
+      ${default_defenses}
+  - note: After you click **Next**, the program will take a moment to make a preview of the page.
+---
+id: preview defenses
+reconsider:
+  - appearance_answer['preview']
+question: |
+  Appearance & Answer page 2 preview
+subquestion: |
+  Click the image below to preview page 2 of your *Mortgage Foreclosure Appearance & Answer*.
+  
+  **Note: this is not a complete form.** Finish the program to get all your forms.
+ 
+  ${ pdf_concatenate(appearance_answer['preview'], filename="appearance-preview.pdf").extract_pages(first=2, last=2) }
+  
+  If you want to make changes, click **Back** or go to the [**Affirmative defenses**](${ url_action('section_defenses') }) section. If you do not want to make changes or you need more space, click **Next**.
+continue button field: preview_defenses
+---
+id: add defenses page
+question: |
+  Do you want to add an additional page to describe your defenses?
+fields:
+  - no label: add_defenses_page
+    datatype: yesnoradio
+---
+id: additional defenses description
+question: |
+  Describe any additional defenses you have in your own words. 
+subquestion: |  
+  You must provide facts that support your defenses.
+  
+  You can preview how your answer looks on the form on the next screen.
+  
+  ${collapse_template(defense_thus_far)}
+fields:
+  - label: Defenses
+    field: additional_defenses_description
+    input type: area
+    rows: 16
+    maxlength: 2400
+  - note: After you click **Next**, the program will take a moment to make a preview of the page.
+---
+template: defense_thus_far
+subject: |
+  **Show me what I have already entered.**
+content: |  
+  ${defenses_description}
+---
+id: preview defenses
+reconsider:
+  - additional_defenses['preview']
+question: |
+  Additional Defenses page 1 preview
+subquestion: |
+  Click the image below to preview page 2 of your *Additional Defenses for Mortgage Foreclosure Appearance & Answer*.
+  
+  **Note: this is not a complete form.** Finish the program to get all your forms.
+ 
+  ${ pdf_concatenate(additional_defenses['preview'], filename="additional_defenses-preview.pdf").extract_pages(first=1, last=1) }
+  
+  If you want to make changes, click **Back** or go to the [**Affirmative defenses**](${ url_action('section_defenses') }) section. If you do not want to make changes, click **Next**.
+continue button field: preview_additional_defenses
+---
+id: affirmative defense details
+question: |
+  Affirmative defense details
+subquestion: |
+  Enter details about your affirmative defense.
+fields:
+  - Short name or description of the affirmative defense: defenses[i].name.text
+    maxlength: 75
+  - Facts that support your defense:: defenses[i].details
+    input type: area
+    rows: 11
+    maxlength: 625
+    help: |
+      The form has limited space. You can fit more words if you don't break lines with the Enter or Return key. 
+---
+id: any other defenses
+question: |
+  Do you have another affirmative defense?
+subquestion: |
+  
+  You can enter up to 3 affirmative defenses. So far you have told us about:
+  
+  % for defense in defenses:
+   * ${defense.name.text}
+  % endfor
+fields:
+  - "Add another affirmative defense?": defenses.there_is_another
+    datatype: yesnoradio
+---
+#code: |
+#  defenses[i].name.text
+#  defenses[i].complete = True
+#---
+#code: |
+#  if defenses.number_gathered() >= 3:
+#    defenses.there_is_another = False  
+---
+reconsider: True
+code: |
+  delivery_parties = DAList("delivery_parties", elements = other_parties)
+  for index, user in enumerate(users):
+    if index > 0:
+      if not user.fully_agree:
+        delivery_parties.append(user)
+---
+id: delivery intro
+continue button field: delivery_intro
+question: |
+  Send your forms to all other parties
+subquestion: |
+  These are the other parties in this case: ${comma_and_list(delivery_parties)}.
+
+  You must send a copy of your forms to each of them.
+
+  If someone in the case has a lawyer, you only need to send it to their lawyer.
+---
+generic object: ALIndividual
+id: has lawyer
+question: |
+  Does ${ x.name.full(middle="full") } have a lawyer in this case?
+field: x.is_represented
+choices:
+  - Yes: True
+  - No: False
+  - I don't know.: null 
+# note: null will be None in review screen
+---
+id: add lawyer
+generic object: ALIndividual
+question: |
+  Who is  ${ x.name.full(middle="full") }'s lawyer?
+fields:
+  - First name: x.lawyer.name.first
+  - Middle name: x.lawyer.name.middle
+    required: False
+  - Last name: x.lawyer.name.last
+  - Suffix: x.lawyer.name.suffix
+    code: |
+      name_suffix()
+    required: False  
+---
+id: delivery party address
+sets:
+  - x.address.address
+  - x.address.city
+  - x.address.zip
+generic object: ALIndividual
+question: |
+  % if showifdef("x.fully_agree"):
+  What is ${ x.name.full(middle="full") }'s address?
+  % elif x.is_represented:
+  What is ${ x.lawyer.name.full(middle="full") }'s address?
+  % else:
+  What is ${ x.name.full(middle="full") }'s address?
+  % endif
+fields:
+  - Street address: x.address.address
+    address autocomplete: True
+  - Address line 2: x.address.unit
+    required: False
+  - City: x.address.city
+  - State: x.address.state
+    code: |
+      states_list()
+    default: IL      
+  - ZIP code: x.address.zip
+---
+#added to remove same as / someplace else default in ql_baseline.yml
+id: users delivery party address
+sets:
+  - users[i].address.address
+  - users[i].address.city
+  - users[i].address.zip
+generic object: ALIndividual
+question: |
+  % if showifdef("users[i].fully_agree"):
+  What is ${ users[i].name.full(middle="full") }'s address?
+  % elif users[i].is_represented:
+  What is ${ users[i].lawyer.name.full(middle="full") }'s address?
+  % else:
+  What is ${ users[i].name.full(middle="full") }'s address?
+  % endif
+fields:
+  - Street address: users[i].address.address
+    address autocomplete: True
+  - Address line 2: users[i].address.unit
+    required: False
+  - City: users[i].address.city
+  - State: users[i].address.state
+    code: |
+      states_list()
+    default: IL      
+  - ZIP code: users[i].address.zip
+
+---
+id: knows delivery method
+generic object: ALIndividual
+question: |
+  % if x.is_represented:
+  Do you know **how** and **when** you will send your forms to ${ x.lawyer.name.full(middle="full") }?
+  % else:
+  Do you know **how** and **when** you will send your forms to ${ x.name.full(middle="full") }?
+  % endif
+subquestion: |
+  ${ collapse_template(delivery_method_help) }  
+  
+  The Proof of Delivery section is where you explain how you will send a copy of your forms to the other parties in the case.
+
+  For best results, complete the Proof of Delivery section and send the forms today.
+
+  If you do not know this now, you can add it to the Proof of Delivery section of your forms later.
+field: x.knows_delivery_method
+choices:
+  - Yes: True
+  - No. I do not know this now. I will add it to my forms later.: False
+---
+template: delivery_method_help
+subject: |
+  **What are my delivery options?**
+content: |  
+  You can deliver the forms by:
+  
+  * The court's **{e-filing system}**,
+  * Email,
+  * US mail or a delivery company (like UPS or FedEx), or
+  * Hand delivery to the party, the party's family member over 13 at their residence, the party's lawyer, or their lawyer's office.
+
+  If the other party listed an email address on the court documents, you must send the forms to them by email or through the e-filing system. You may use US mail or a delivery company, or hand delivery if you or the other party **does not** have an email address.
+  
+  If you are in a prison or jail, you can deliver by mail.
+terms:
+  - e-filing system: |
+      The court's e-filing system could be any approved electronic filing service provider (EFSP).
+---
+generic object: ALIndividual
+id: party delivery method
+question: |
+  % if x.is_represented:
+  How will you send your forms to ${ x.lawyer.name.full(middle="full") }?
+  % else:
+  How will you send your forms to ${ x.name.full(middle="full") }?
+  % endif
+subquestion: |  
+  If the other party listed an email address on the court documents, you must send the forms to them by email or through the e-filing system. You may use US mail or a delivery company, or hand delivery if you or the other party **does not** have an email address. If you are in a prison or jail, you can deliver by mail.
+
+  For best results, complete the Proof of Delivery section and send the forms today.
+
+  **Note:** If you do not know this now, be sure to add it to the Proof of Delivery section of your forms later.
+
+  ${ collapse_template(efiling_help) }
+fields:
+  - E-filing system: x.efm_delivery
+    datatype: yesnowide
+    help: |
+      The court's e-filing system could be any approved electronic filing service provider (EFSP).
+  - Email: x.email_delivery
+    datatype: yesnowide
+  - Email address (for e-filing system or email delivery): x.delivery_email
+    datatype: email
+    js show if: 
+      val("x.efm_delivery") == true || val("x.email_delivery") == true
+    required: False
+  - US mail: x.mail_delivery
+    datatype: yesnowide
+  - Street address of post office or mailbox: x.regular_mail.address
+    address autocomplete: True
+    show if: 
+      variable: x.mail_delivery
+      is: True
+    required: False
+  - Address line 2: x.regular_mail.unit
+    show if: 
+      variable: x.mail_delivery
+      is: True
+    required: False
+  - City: x.regular_mail.city
+    maxlength: 30
+    show if: 
+      variable: x.mail_delivery
+      is: True
+    required: False
+  - State: x.regular_mail.state
+    code: |
+      states_list()
+    default: IL
+    show if: 
+      variable: x.mail_delivery
+      is: True
+    required: False
+  - ZIP code: x.regular_mail.zip
+    show if: 
+      variable: x.mail_delivery
+      is: True
+    required: False
+  - Delivery company (like UPS or FedEx): x.by_third_party
+    datatype: yesnowide
+  - Company name: x.third_party.name.first
+    show if: x.by_third_party
+  - Street address: x.third_party.address.address
+    address autocomplete: True
+    show if: 
+      variable: x.by_third_party
+      is: True
+    required: False
+  - Address line 2: x.third_party.address.unit
+    show if: 
+      variable: x.by_third_party
+      is: True
+    required: False
+  - City: x.third_party.address.city
+    maxlength: 30
+    show if: 
+      variable: x.by_third_party
+      is: True
+    required: False
+  - State: x.third_party.address.state
+    code: |
+      states_list()
+    default: IL
+    show if: 
+      variable: x.by_third_party
+      is: True
+    required: False
+  - ZIP code: x.third_party.address.zip
+    show if: 
+      variable: x.by_third_party
+      is: True
+    required: False 
+  - Hand delivery: x.hand_delivery
+    datatype: yesnowide
+    help: |
+      You can only deliver to the party, the party's family member over 13 at their residence, the party's lawyer, or their lawyer's office.
+  - Street address: x.hand_delivery_address.address
+    address autocomplete: True
+    show if: 
+      variable: x.hand_delivery
+      is: True
+    required: False
+  - Address line 2: x.hand_delivery_address.unit
+    show if: 
+      variable: x.hand_delivery
+      is: True
+    required: False
+  - City: x.hand_delivery_address.city
+    show if: 
+      variable: x.hand_delivery
+      is: True
+    required: False
+  - State: x.hand_delivery_address.state
+    code: |
+      states_list()
+    default: IL      
+    show if: 
+      variable: x.hand_delivery
+      is: True
+    required: False
+  - ZIP code: x.hand_delivery_address.zip
+    show if: 
+      variable: x.hand_delivery
+      is: True
+    required: False
+  - By mail from a prison or jail: x.jail_delivery
+    datatype: yesnowide
+  - Name of prison or jail: x.delivery_jail_name
+    maxlength: 40
+    show if: 
+      variable: x.jail_delivery
+      is: True
+    required: False
+---
+template: efiling_help
+subject: |
+  **What if I need help?**
+content: |  
+  If you need help delivering by email or using the e-filing service provider, you can visit a [**Legal Self-Help Center**](https://www.illinoislegalaid.org/get-legal-help/lshc-directory) or you can call or text [**Illinois Court Help**](https://www.ilcourthelp.gov) at 833-411-1121.
+---
+#id: other party delivery method
+## generic object: ALIndividual
+##changed from generic object to other_parties to allow for changing answers via Back
+#question: |
+#  % if other_parties[i].is_represented:
+#  How will you send your forms to ${ other_parties[i].lawyer.name.full(middle="full") }?
+#  % else:
+#  How will you send your forms to ${ other_parties[i].name.full(middle="full") }?
+#  % endif
+#subquestion: |  
+#  If the other party listed an email address on the court documents, you must send the forms to them by email or through the e-filing system. You may use US mail or a delivery company, or hand delivery if you or the other party **does not** have an email address. If you are in a prison or jail, you can deliver by mail.
+#
+#  For best results, complete the Proof of Delivery section and send the forms today.
+#
+#  **Note:** If you do not know this now, be sure to add it to the Proof of Delivery section of your forms later.
+#
+#  ${ collapse_template(efiling_help) }  
+#fields:
+#  - E-filing system: other_parties[i].efm_delivery
+#    datatype: yesnowide
+#    help: |
+#      The court's e-filing system could be any approved electronic filing service provider (EFSP).
+#  - Email: other_parties[i].email_delivery
+#    datatype: yesnowide
+#  - Email address (for e-filing system or email delivery): other_parties[i].delivery_email
+#    datatype: email
+#    js show if: 
+#      val("other_parties[i].efm_delivery") == true || val("other_parties[i].email_delivery") == true
+#    required: False
+#  - US mail or delivery company (like UPS or FedEx): other_parties[i].mail_delivery
+#    datatype: yesnowide
+#  - City of mailbox or delivery company: other_parties[i].delivery_mail_city
+#    maxlength: 30
+#    show if: 
+#      variable: other_parties[i].mail_delivery
+#      is: True
+#    required: False
+#  - State of mailbox or delivery company: other_parties[i].delivery_mail_state
+#    code: |
+#      states_list()
+#    default: IL
+#    show if: 
+#      variable: other_parties[i].mail_delivery
+#      is: True
+#    required: False
+#  - Hand delivery: other_parties[i].hand_delivery
+#    datatype: yesnowide
+#    help: |
+#      You can only deliver to the party, the party's family member over 13 at their residence, the party's lawyer, or their lawyer's office.
+#  - Street address: other_parties[i].hand_delivery_address.address
+#    address autocomplete: True
+#    show if: 
+#      variable: other_parties[i].hand_delivery
+#      is: True
+#    required: False
+#  - Address line 2: other_parties[i].hand_delivery_address.unit
+#    show if: 
+#      variable: other_parties[i].hand_delivery
+#      is: True
+#    required: False
+#  - City: other_parties[i].hand_delivery_address.city
+#    show if: 
+#      variable: other_parties[i].hand_delivery
+#      is: True
+#    required: False
+#  - State: other_parties[i].hand_delivery_address.state
+#    code: |
+#      states_list()
+#    default: IL      
+#    show if: 
+#      variable: other_parties[i].hand_delivery
+#      is: True
+#    required: False
+#  - ZIP code: other_parties[i].hand_delivery_address.zip
+#    show if: 
+#      variable: other_parties[i].hand_delivery
+#      is: True
+#    required: False
+#  - By mail from a prison or jail: other_parties[i].jail_delivery
+#    datatype: yesnowide
+#  - Name of prison or jail: other_parties[i].delivery_jail_name
+#    maxlength: 40
+#    show if: 
+#      variable: other_parties[i].jail_delivery
+#      is: True
+#    required: False
+---
+id: delivery time
+generic object: ALIndividual
+question: |
+  % if x.is_represented:
+  When will you send your forms to ${ x.lawyer.name.full(middle="full") }?
+  % else:
+  When will you send your forms to ${ x.name.full(middle="full") }?
+  % endif
+subquestion: |
+  For best results, complete the Proof of Delivery section and send the forms today.
+
+  **Note:** If you do not know this now, be sure to add it to the Proof of Delivery section of your forms later.
+fields:
+  - Date: x.delivery_date
+    datatype: date
+    required: False
+    max: ${ today().plus(years=1) }
+  - Time: x.delivery_time
+    datatype: time
+    required: False
+validation code: |
+  if (not showifdef('x.delivery_date')):
+    x.knows_delivery_date = False
+  else:
+    x.knows_delivery_date = True
+  if (not showifdef('x.delivery_time')):
+    x.knows_delivery_time = False
+  else:
+    x.knows_delivery_time = True
+
+---
+id: hand delivery info
+continue button field: hand_delivery_info
+question: |
+  Check your Proof of Delivery
+subquestion: |
+  **Don't forget!** Make sure you review and complete the Proof of Delivery section of your forms. 
+  
+  [FILE proof_of_delivery_snip_2024.png, 100%, Proof of Delivery section of forms]
+
+  **Instructions when delivering your forms by hand:**
+
+  * If a party in your case does not have a lawyer, you can hand-deliver the forms to them or to a family member who is 13 or older at their home.
+  * If they do have a lawyer, you can hand-deliver the forms to the lawyer or to the lawyer's office.
+---
+id: user address
+question: |
+  What is your address?
+fields:
+  - Street address: users[0].address.address
+    address autocomplete: True
+  - Address line 2: users[0].address.unit
+    required: False
+  - City: users[0].address.city
+  - State: users[0].address.state
+    code: |
+      states_list()
+    default: IL      
+  - ZIP code: users[0].address.zip
+---
+id: other user phone
+question: |
+  What is ${users[i].name.full(middle='full')}'s phone number?
+subquestion: |
+  If you do not know this, you can leave this blank.
+fields:  
+  - Phone number: users[i].phone_number
+    datatype: al_international_phone
+    required: False
+---
+sets:
+  - users[0].has_email_address
+id: your contact information
+generic object: ALIndividual
+question: |
+  What is your contact information?
+subquestion: |
+  The court or other parties might need to contact you about this case.
+
+  **This information will appear on your court forms.**
+  
+  If you do not want to list a phone number on your forms, leave it blank.
+
+  If you have an email address, you must list it. Be sure to check your email daily, otherwise you may miss important information about your case.
+
+  ${ collapse_template(contact_info_help) }  
+fields:  
+  - Phone number: users[0].phone_number
+    datatype: al_international_phone
+    required: False
+  - label: |
+      Do you have an email address?
+    field: users[0].has_email_address      
+    datatype: yesnoradio
+  - note: |
+      This email address will appear on your court forms. Be sure to check 
+      this email daily, otherwise you may miss important information about 
+      your case.
+    show if: users[0].has_email_address      
+  - Email address: users[0].email    
+    datatype: email
+    show if: 
+      variable: users[0].has_email_address
+      is: True
+---
+template: contact_info_help
+subject: |
+  **What if I don't want to list my email address?**
+content: |  
+  If you do not want to enter your personal email address, you can create a new email account to get email about your case.
+  
+  To make a new email account try one of these email services:
+  
+  * [**Gmail**](https://accounts.google.com/SignUp)
+  * [**Outlook**](https://outlook.live.com/owa/?nlp=1&signup=1)
+  * [**Yahoo**](https://login.yahoo.com/account/create?.lang=en-US&.intl=us)
+---
+id: pronouns
+question: |
+  What pronouns do you want the court to use?
+subquestion: |
+  On the *Appearance*, you can tell the court which pronouns you use.
+fields:
+  - I prefer not to answer.: pronouns_none
+    datatype: yesno
+    disable others: True
+  - Pronouns (optional): pronouns
+    datatype: checkboxes
+    none of the above: False
+    required: False
+    choices:
+      - She/her
+      - He/him
+      - They/them
+      - Other
+  - Other pronouns: other_pronouns
+    maxlength: 40
+    show if:
+      variable: pronouns["Other"]
+      is: True
+validation code: |
+  if pronouns_none == False and pronouns.all_false():
+    validation_error("Please select at least one.", field="pronouns")
+---
+id: prefix
+question: |
+  What prefix do you want the court to use?
+subquestion: |
+  On the *Appearance*, you can tell the court what prefix you use.
+fields:
+  - I prefer not to answer.: prefix_none
+    datatype: yesno
+    disable others: True
+  - Prefix (optional): prefix
+    datatype: checkboxes
+    none of the above: False
+    required: False
+    choices:
+      - Ms.
+      - Mrs.
+      - Mr.
+      - Mx.
+      - Other
+  - Other prefix: other_prefix
+    maxlength: 10
+    show if:
+      variable: prefix["Other"]
+      is: True
+validation code: |
+  if prefix_none == False and prefix.all_false():
+    validation_error("Please select at least one.", field="prefix")
+
+---
+id: forms assembling
+continue button field: forms_assembling
+question: |
+  Almost done
+subquestion: |
+  After you click **Next**, it may take a few moments to finish making your forms.
+  
+  ###### You do not need to refresh your screen. Hang in there!
+  
+  [NEWLINE]
+---
+id: e-signature
+question: |
+  Do you want to add your e-signature to your forms?
+subquestion: |
+  This program can put “**/s/ ${users[0].name.full(middle='full')}**” where you would sign your name. The court will accept this as your signature.
+
+  If you do not add your **{e-signature}**, you must sign your paper forms before you file and deliver them.
+
+  <div class="alert alert-info ilao-info" role="alert">
+    <h6 class="alert-heading">What it means to sign your forms</h6>
+    <p>By signing your court forms you are certifying that:</p>
+    <p><ul>
+      <li>Everything on the forms is true and correct, and</li>
+      <li>You understand that making a false statement on the form is perjury, which can result in criminal penalties.</li>
+    </ul></p>
+  <p>See the <a href="https://www.ilga.gov/legislation/ilcs/documents/073500050k1-109.htm"><b>Code of Civil Procedure, 735 ILCS 5/1-109</b></a> for more information.</p>
+  </div>
+fields:
+  - "Add e-signature?": e_signature
+    datatype: yesnoradio
+terms:
+  - "e-signature": |
+      An e-signature is an electronic signature. It is a digital version of a signature that has the same effect as a hand-written signature. 
+---
+id: get docs screen
+event: get_docs_screen
+question: |
+  Download
+subquestion: |  
+  Your forms are ready. View and download your forms below. Click **Make changes** to fix any mistakes.
+
+  This program does not file your Appearance and Answer forms with the court or deliver them to other parties in your case. You will need to do this yourself. Learn about [**e-filing in Illinois**](https://www.illinoiscourts.gov/eservices/information-for-filers-without-lawyers).
+
+  ${ action_button_html(url_action('review_answers'), label=':edit: Make changes', color='success', size="md") }
+  
+  ${ al_user_bundle.download_list_html() }
+
+  &nbsp;
+
+  ${ al_user_bundle.send_button_html(show_editable_checkbox=False) }
+
+  **Note:** This program does not file your forms with the court or deliver them to other parties in your case. You will need to do this yourself. Learn about [**e-filing in Illinois**](https://www.illinoiscourts.gov/eservices/information-for-filers-without-lawyers).
+  
+  Thank you for using ILAO Easy Forms!
+under: |
+  % if not user_logged_in():
+  [${fa_icon("sign-in-alt", color="#0079d0", size="sm")} **Sign-in**](${url_of('login', next=interview_url())}) or [**create**](${url_of('register', next=interview_url())}) an ILAO Easy Form account to save your progress (optional).
+  % endif 
+
+  &nbsp;
+  ${ action_button_html(interview_url(i="docassemble.ILAO:feedback.yml", easy_form_interview=ilao_easy_form_url, easy_form_title=ilao_easy_form_title, easy_form_page=current_context().question_id, easy_form_variable=current_context().variable, local=False,reset=1), label=':comment: Was this program helpful?', color="#181c36", size="md", new_window=True) }
+---
+generic object: ALDocumentBundle
+template: x.send_email_template
+subject: |
+  Respond to a mortgage foreclosure complaint forms
+content: |
+  Your forms are attached.
+  
+  Thanks for using ILAO Easy Forms!
+  
+  [Illinois Legal Aid Online](https://www.illinoislegalaid.org)
+---
+objects:
+  - al_user_bundle: ALDocumentBundle.using(elements=[instructions, appearance_answer, additional_answers, additional_defenses, additional_proof_bundle, additional_signatures_bundle], filename="respond_to_foreclosure_complaint.pdf", title="All forms")
+  - al_court_bundle: ALDocumentBundle.using(elements=[appearance_answer, additional_answers, additional_defenses, additional_proof_bundle, additional_signatures_bundle], filename="respond_to_foreclosure_complaint.pdf", title="Foreclosure Complaint Appearance and Answer")
+---
+reconsider: True
+code: |
+  instructions.enabled = True
+  appearance_answer.enabled = True
+  additional_defenses.enabled = False
+  additional_answers.enabled = False
+  if add_defenses_page:
+    additional_defenses.enabled = True
+  if answer_responses.number_gathered() > 22:
+    additional_answers.enabled = True
+---
+objects:
+  - instructions: ALDocument.using(title="Instructions", filename="instructions.pdf", has_addendum=False)
+  - appearance_answer: ALDocument.using(title="Appearance & Answer", filename="appearance.pdf", has_addendum=False)
+  - additional_defenses: ALDocument.using(title="Additional Defenses", filename="additional_defenses.pdf", has_addendum=False)
+  - additional_answers: ALDocument.using(title="Additional Answers", filename="additional_answers.pdf", has_addendum=False)
+---
+generic object: ALIndividual
+objects:
+  - x.additional_signatures: ALDocument.using(title="Additional Defendant Signatures", filename="additional_signatures.pdf", has_addendum=False)
+  - x.additional_proof: ALDocument.using(title="Additional Proof of Delivery", filename="additional_proof.pdf", has_addendum=False)
+---
+objects:
+  - additional_signatures_bundle: ALDocumentBundle.using(elements=[], title="Additional Defendant Signatures", filename="additional_signatures.pdf", has_addendum=False)
+  - additional_proof_bundle: ALDocumentBundle.using(elements=[], title="Additional Proof of Delivery", filename="additional_proof.pdf", has_addendum=False)
+---
+generic object: ALIndividual
+id: signature doc enable debug
+continue button field: x.enable_debug
+question: |
+  Debug
+subquestion: |
+  This is ${x.name.full(middle='full')}. 
+  
+  Do they sign? ${word(yesno(x.fully_agree))}
+  
+  Is Additional Signatures enabled? ${word(yesno(x.additional_signatures.enabled))}
+---
+id: specific debug
+continue button field: specific_debug
+question: |
+  Debug
+subquestion: |
+  Is this darn enabled variable defined? ${word(yesno(users[4].additional_signatures.enabled))}
+---
+reconsider: True
+code: |
+  signatures_to_bundle = []
+  additional_signatures_bundle.enabled = False
+  
+  for index, party in enumerate(signing_users):
+    party.additional_signatures.enabled = False
+    if index < 3:
+      party.additional_signatures.enabled = False
+    elif (index % 3) == 0:
+     
+      party.additional_signatures.enabled = True
+      signatures_to_bundle.append(party.additional_signatures)
+      additional_signatures_bundle.enabled = True
+      if (index + 1) < signing_users.number_gathered():
+        party.second_person = signing_users[index + 1]
+        
+      elif defined('party.second_person'):
+        undefine('party.second_person')
+      if (index + 2) < signing_users.number_gathered():
+        party.third_person = signing_users[index + 2]
+      elif defined('party.third_person'):
+        undefine('party.third_person')
+    else:
+      
+      party.additional_signatures.enabled = False
+    #party.enable_debug
+  additional_signatures_bundle.elements = signatures_to_bundle
+  refresh_signatures_bundle = True
+---
+reconsider: True
+code: |
+  proofs_to_bundle = []
+  additional_proof_bundle.enabled = False
+  for index, party in enumerate(delivery_parties):
+    party.additional_proof.enabled = False
+    if index < 3:
+      party.additional_proof.enabled = False
+    elif (index % 2) == 1:
+      party.additional_proof.enabled = True
+      additional_proof_bundle.enabled = True
+      if (index + 1) < delivery_parties.number_gathered():
+        party.second_person = delivery_parties[index + 1]
+        party.include_two = True
+      elif defined('party.second_person'):
+        undefine('party.second_person')
+        party.include_two = False
+      else:
+        party.include_two = False
+      proofs_to_bundle.append(party.additional_proof)
+    else:
+      party.additional_proof.enabled = False
+  additional_proof_bundle.elements = proofs_to_bundle
+  refresh_delivery_bundle = True
+---
+attachment:
+  variable name: instructions[i]
+  name: instructions
+  filename: appearance-instructions
+  skip undefined: True
+  editable: False
+  pdf template file: respond_foreclosure_instructions.pdf
+  fields:
+    - "fake": ${ "" }
+---
+attachment:
+  variable name: appearance_answer[i]
+  name: appearance_answer
+  filename: appearance_answer
+  skip undefined: True
+  editable: False
+  pdf template file: foreclosure_appearance_answer.pdf
+  fields:
+    - "filing_county": ${trial_court.address.county.upper()}
+    - "plaintiff_names": |
+        % if in_re_check:
+        ${ in_re_label }
+        % else:
+        ${comma_and_list(other_parties)}
+        % endif
+    - "all_defendant_names": |
+        % if in_re_check:
+        ${ "" }
+        % else:
+        ${comma_and_list(users)}
+        % endif
+    - "case_number": ${case_number}
+    - "submitting_defendants": ${comma_and_list(signing_users)}
+    - "property_address_line_1": ${foreclosure_property.line_one(bare=True)}
+    - "property_address_line_2": ${foreclosure_property.line_two()}
+    - "yes_getting_mod": ${working_with_lender}
+    - "no_getting_mod": ${ True if working_with_lender == False else False}
+    - "yes_have_mod": ${approved_modification}
+    - "no_have_mod": ${True if approved_modification == False else False}
+    - "yes_counselor": ${housing_counselor}
+    - "no_counselor": ${True if housing_counselor == False else False}
+    - "counselor_agency": ${counselor_company if housing_counselor else ""}
+    - "counselor_name": ${counselor.name.full(middle='full') if housing_counselor else ""}
+    - "paragraph_number_1": ${ answer_responses[0].para if complaint_labeled else '' }
+    - "paragraph_letter_1": ${ answer_responses[0].sub if complaint_labeled else '' }
+    - "paragraph_agree_1": ${ True if answer_responses[0].response == "Admit" and complaint_labeled else False }
+    - "paragraph_disagree_1": ${ True if answer_responses[0].response == "Deny" and complaint_labeled else False }
+    - "paragraph_idk_1": ${ True if answer_responses[0].response == "Do not know" and complaint_labeled else False }
+    - "paragraph_number_2": ${ answer_responses[1].para if complaint_labeled else '' }
+    - "paragraph_letter_2": ${ answer_responses[1].sub if complaint_labeled else '' }
+    - "paragraph_agree_2": ${ True if answer_responses[1].response == "Admit" and complaint_labeled else False }
+    - "paragraph_disagree_2": ${ True if answer_responses[1].response == "Deny" and complaint_labeled else False }
+    - "paragraph_idk_2": ${ True if answer_responses[1].response == "Do not know" and complaint_labeled else False }
+    - "paragraph_number_3": ${ answer_responses[2].para if complaint_labeled else '' }
+    - "paragraph_letter_3": ${ answer_responses[2].sub if complaint_labeled else '' }
+    - "paragraph_agree_3": ${ True if answer_responses[2].response == "Admit" and complaint_labeled else False }
+    - "paragraph_disagree_3": ${ True if answer_responses[2].response == "Deny" and complaint_labeled else False }
+    - "paragraph_idk_3": ${ True if answer_responses[2].response == "Do not know" and complaint_labeled else False }
+    - "paragraph_number_4": ${ answer_responses[3].para if complaint_labeled else '' }
+    - "paragraph_letter_4": ${ answer_responses[3].sub if complaint_labeled else '' }
+    - "paragraph_agree_4": ${ True if answer_responses[3].response == "Admit" and complaint_labeled else False }
+    - "paragraph_disagree_4": ${ True if answer_responses[3].response == "Deny" and complaint_labeled else False }
+    - "paragraph_idk_4": ${ True if answer_responses[3].response == "Do not know" and complaint_labeled else False }
+    - "paragraph_number_5": ${ answer_responses[4].para if complaint_labeled else '' }
+    - "paragraph_letter_5": ${ answer_responses[4].sub if complaint_labeled else '' }
+    - "paragraph_agree_5": ${ True if answer_responses[4].response == "Admit" and complaint_labeled else False }
+    - "paragraph_disagree_5": ${ True if answer_responses[4].response == "Deny" and complaint_labeled else False }
+    - "paragraph_idk_5": ${ True if answer_responses[4].response == "Do not know" and complaint_labeled else False }
+    - "paragraph_number_6": ${ answer_responses[5].para if complaint_labeled else '' }
+    - "paragraph_letter_6": ${ answer_responses[5].sub if complaint_labeled else '' }
+    - "paragraph_agree_6": ${ True if answer_responses[5].response == "Admit" and complaint_labeled else False }
+    - "paragraph_disagree_6": ${ True if answer_responses[5].response == "Deny" and complaint_labeled else False }
+    - "paragraph_idk_6": ${ True if answer_responses[5].response == "Do not know" and complaint_labeled else False }
+    - "paragraph_number_7": ${ answer_responses[6].para if complaint_labeled else '' }
+    - "paragraph_letter_7": ${ answer_responses[6].sub if complaint_labeled else '' }
+    - "paragraph_agree_7": ${ True if answer_responses[6].response == "Admit" and complaint_labeled else False }
+    - "paragraph_disagree_7": ${ True if answer_responses[6].response == "Deny" and complaint_labeled else False }
+    - "paragraph_idk_7": ${ True if answer_responses[6].response == "Do not know" and complaint_labeled else False }
+    - "paragraph_number_8": ${ answer_responses[7].para if complaint_labeled else '' }
+    - "paragraph_letter_8": ${ answer_responses[7].sub if complaint_labeled else '' }
+    - "paragraph_agree_8": ${ True if answer_responses[7].response == "Admit" and complaint_labeled else False }
+    - "paragraph_disagree_8": ${ True if answer_responses[7].response == "Deny" and complaint_labeled else False }
+    - "paragraph_idk_8": ${ True if answer_responses[7].response == "Do not know" and complaint_labeled else False }
+    - "paragraph_number_9": ${ answer_responses[8].para if complaint_labeled else '' }
+    - "paragraph_letter_9": ${ answer_responses[8].sub if complaint_labeled else '' }
+    - "paragraph_agree_9": ${ True if answer_responses[8].response == "Admit" and complaint_labeled else False }
+    - "paragraph_disagree_9": ${ True if answer_responses[8].response == "Deny" and complaint_labeled else False }
+    - "paragraph_idk_9": ${ True if answer_responses[8].response == "Do not know" and complaint_labeled else False }
+    - "paragraph_number_10": ${ answer_responses[9].para if complaint_labeled else '' }
+    - "paragraph_letter_10": ${ answer_responses[9].sub if complaint_labeled else '' }
+    - "paragraph_agree_10": ${ True if answer_responses[9].response == "Admit" and complaint_labeled else False }
+    - "paragraph_disagree_10": ${ True if answer_responses[9].response == "Deny" and complaint_labeled else False }
+    - "paragraph_idk_10": ${ True if answer_responses[9].response == "Do not know" and complaint_labeled else False }
+    - "paragraph_number_11": ${ answer_responses[10].para if complaint_labeled else '' }
+    - "paragraph_letter_11": ${ answer_responses[10].sub if complaint_labeled else '' }
+    - "paragraph_agree_11": ${ True if answer_responses[10].response == "Admit" and complaint_labeled else False }
+    - "paragraph_disagree_11": ${ True if answer_responses[10].response == "Deny" and complaint_labeled else False }
+    - "paragraph_idk_11": ${ True if answer_responses[10].response == "Do not know" and complaint_labeled else False }
+    - "paragraph_number_12": ${ answer_responses[11].para if complaint_labeled else '' }
+    - "paragraph_letter_12": ${ answer_responses[11].sub if complaint_labeled else '' }
+    - "paragraph_agree_12": ${ True if answer_responses[11].response == "Admit" and complaint_labeled else False }
+    - "paragraph_disagree_12": ${ True if answer_responses[11].response == "Deny" and complaint_labeled else False }
+    - "paragraph_idk_12": ${ True if answer_responses[11].response == "Do not know" and complaint_labeled else False }
+    - "paragraph_number_13": ${ answer_responses[12].para if complaint_labeled else '' }
+    - "paragraph_letter_13": ${ answer_responses[12].sub if complaint_labeled else '' }
+    - "paragraph_agree_13": ${ True if answer_responses[12].response == "Admit" and complaint_labeled else False }
+    - "paragraph_disagree_13": ${ True if answer_responses[12].response == "Deny" and complaint_labeled else False }
+    - "paragraph_idk_13": ${ True if answer_responses[12].response == "Do not know" and complaint_labeled else False }
+    - "paragraph_number_14": ${ answer_responses[13].para if complaint_labeled else '' }
+    - "paragraph_letter_14": ${ answer_responses[13].sub if complaint_labeled else '' }
+    - "paragraph_agree_14": ${ True if answer_responses[13].response == "Admit" and complaint_labeled else False }
+    - "paragraph_disagree_14": ${ True if answer_responses[13].response == "Deny" and complaint_labeled else False }
+    - "paragraph_idk_14": ${ True if answer_responses[13].response == "Do not know" and complaint_labeled else False }
+    - "paragraph_number_15": ${ answer_responses[14].para if complaint_labeled else '' }
+    - "paragraph_letter_15": ${ answer_responses[14].sub if complaint_labeled else '' }
+    - "paragraph_agree_15": ${ True if answer_responses[14].response == "Admit" and complaint_labeled else False }
+    - "paragraph_disagree_15": ${ True if answer_responses[14].response == "Deny" and complaint_labeled else False }
+    - "paragraph_idk_15": ${ True if answer_responses[14].response == "Do not know" and complaint_labeled else False }
+    - "paragraph_number_16": ${ answer_responses[15].para if complaint_labeled else '' }
+    - "paragraph_letter_16": ${ answer_responses[15].sub if complaint_labeled else '' }
+    - "paragraph_agree_16": ${ True if answer_responses[15].response == "Admit" and complaint_labeled else False }
+    - "paragraph_disagree_16": ${ True if answer_responses[15].response == "Deny" and complaint_labeled else False }
+    - "paragraph_idk_16": ${ True if answer_responses[15].response == "Do not know" and complaint_labeled else False }
+    - "paragraph_number_17": ${ answer_responses[16].para if complaint_labeled else '' }
+    - "paragraph_letter_17": ${ answer_responses[16].sub if complaint_labeled else '' }
+    - "paragraph_agree_17": ${ True if answer_responses[16].response == "Admit" and complaint_labeled else False }
+    - "paragraph_disagree_17": ${ True if answer_responses[16].response == "Deny" and complaint_labeled else False }
+    - "paragraph_idk_17": ${ True if answer_responses[16].response == "Do not know" and complaint_labeled else False }
+    - "paragraph_number_18": ${ answer_responses[17].para if complaint_labeled else '' }
+    - "paragraph_letter_18": ${ answer_responses[17].sub if complaint_labeled else '' }
+    - "paragraph_agree_18": ${ True if answer_responses[17].response == "Admit" and complaint_labeled else False }
+    - "paragraph_disagree_18": ${ True if answer_responses[17].response == "Deny" and complaint_labeled else False }
+    - "paragraph_idk_18": ${ True if answer_responses[17].response == "Do not know" and complaint_labeled else False }
+    - "paragraph_number_19": ${ answer_responses[18].para if complaint_labeled else '' }
+    - "paragraph_letter_19": ${ answer_responses[18].sub if complaint_labeled else '' }
+    - "paragraph_agree_19": ${ True if answer_responses[18].response == "Admit" and complaint_labeled else False }
+    - "paragraph_disagree_19": ${ True if answer_responses[18].response == "Deny" and complaint_labeled else False }
+    - "paragraph_idk_19": ${ True if answer_responses[18].response == "Do not know" and complaint_labeled else False }
+    - "paragraph_number_20": ${ answer_responses[19].para if complaint_labeled else '' }
+    - "paragraph_letter_20": ${ answer_responses[19].sub if complaint_labeled else '' }
+    - "paragraph_agree_20": ${ True if answer_responses[19].response == "Admit" and complaint_labeled else False }
+    - "paragraph_disagree_20": ${ True if answer_responses[19].response == "Deny" and complaint_labeled else False }
+    - "paragraph_idk_20": ${ True if answer_responses[19].response == "Do not know" and complaint_labeled else False }
+    - "paragraph_number_21": ${ answer_responses[20].para if complaint_labeled else '' }
+    - "paragraph_letter_21": ${ answer_responses[20].sub if complaint_labeled else '' }
+    - "paragraph_agree_21": ${ True if answer_responses[20].response == "Admit" and complaint_labeled else False }
+    - "paragraph_disagree_21": ${ True if answer_responses[20].response == "Deny" and complaint_labeled else False }
+    - "paragraph_idk_21": ${ True if answer_responses[20].response == "Do not know" and complaint_labeled else False }
+    - "paragraph_number_22": ${ answer_responses[21].para if complaint_labeled else '' }
+    - "paragraph_letter_22": ${ answer_responses[21].sub if complaint_labeled else '' }
+    - "paragraph_agree_22": ${ True if answer_responses[21].response == "Admit" and complaint_labeled else False }
+    - "paragraph_disagree_22": ${ True if answer_responses[21].response == "Deny" and complaint_labeled else False }
+    - "paragraph_idk_22": ${ True if answer_responses[21].response == "Do not know" and complaint_labeled else False }
+    - "additional_paragraphs": ${True if answer_responses.number_gathered() > 22 and complaint_labeled else ''}
+    - "defenses": ${defenses_description if has_defenses else ""}
+    - "additional_defenses": ${True if has_defenses and add_defenses_page else False}
+    - "preview_watermark": ${ watermark if i=='preview' else '' }
+    - "e_signature": ${users[0].name.full(middle='full') if e_signature else ""}
+    - "defendant_name_1": ${signing_users[0].name.full(middle='full')}
+    - "defendant_street_1": ${signing_users[0].address.line_one(bare=True)}
+    - "defendant_csz_1": ${signing_users[0].address.line_two()}
+    - "defendant_phone_1": ${phone_number_formatted(signing_users[0].phone) if signing_users.phone_number != "" else ""}
+    - "defendant_name_2": ${signing_users[1].name.full(middle='full')}
+    - "defendant_street_2": ${signing_users[1].address.line_one(bare=True)}
+    - "defendant_csz_2": ${signing_users[1].address.line_two()}
+    - "defendant_phone_2": ${phone_number_formatted(signing_users[1].phone) if signing_users.phone_number != "" else ""}
+    - "defendant_name_3": ${signing_users[2].name.full(middle='full')}
+    - "defendant_street_3": ${signing_users[2].address.line_one(bare=True)}
+    - "defendant_csz_3": ${signing_users[2].address.line_two()}
+    - "defendant_phone_3": ${phone_number_formatted(signing_users[2].phone) if signing_users.phone_number != "" else ""}
+    - "additional_signatures": ${True if signing_users.number_gathered() > 3 else False}
+    - "agree_to_email": ${users[0].has_email_address}
+    - "user_email": ${users[0].email if users[0].has_email_address else ""}
+    - "delivery_party_name_1": ${delivery_parties[0].lawyer.name.full(middle='full') if delivery_parties[0].is_represented else delivery_parties[0].name.full(middle='full')}
+    - "delivery_party_address_1": ${delivery_parties[0].address.on_one_line(bare=True)}
+    - "delivery_party_email_1": ${ delivery_parties[0].delivery_email}
+    - "hand_delivery_1": ${delivery_parties[0].hand_delivery if delivery_parties[0].knows_delivery_method else False}
+    - "regular_mail_1": ${delivery_parties[0].mail_delivery if delivery_parties[0].knows_delivery_method else False}
+    #JUMP
+    - "post_office_address_1": ${delivery_parties[0].regular_mail.on_one_line(bare=True) if delivery_parties[0].knows_delivery_method and delivery_parties[0].regular_mail else ""}
+    - "third_party_mail_1": ${delivery_parties[0].by_third_party if delivery_parties[0].knows_delivery_method else False}
+    - "third_party_address_1": ${delivery_parties[0].third_party.name.first + " " + delivery_parties[0].third_party.address.on_one_line(bare=True) if delivery_parties[0].knows_delivery_method and delivery_parties[0].by_third_party else ""}
+    - "efm_1": ${delivery_parties[0].efm_delivery if delivery_parties[0].knows_delivery_method else False}
+    - "by_email_1": ${delivery_parties[0].email_delivery if delivery_parties[0].knows_delivery_method else False}
+    - "prison_mail_1": ${delivery_parties[0].jail_delivery if delivery_parties[0].knows_delivery_method else False}
+    - "prison_name_1": ${delivery_parties[0].delivery_jail_name if delivery_parties[0].jail_delivery and delivery_parties[0].knows_delivery_method else ""}
+    - "date_delivered_1": ${delivery_parties[0].delivery_date if delivery_parties[0].knows_delivery_method else ""}
+    - "time_delivered_1": ${format_time(delivery_parties[0].delivery_time, format='h:mm') if delivery_parties[0].knows_delivery_method and delivery_parties[0].delivery_time != "" else ""}
+    - "delivered_am_1": ${True if format_time(delivery_parties[0].delivery_time, format='a') == "AM" and delivery_parties[0].knows_delivery_method else False}
+    - "delivered_pm_1": ${True if format_time(delivery_parties[0].delivery_time, format='a') == "PM" and delivery_parties[0].knows_delivery_method else False}
+    - "delivery_party_name_2": ${delivery_parties[1].lawyer.name.full(middle='full') if delivery_parties[1].is_represented else delivery_parties[1].name.full(middle='full')}
+    - "delivery_party_address_2": ${delivery_parties[1].address.on_one_line(bare=True)}
+    - "delivery_party_email_2": ${ delivery_parties[1].delivery_email}
+    - "hand_delivery_2": ${delivery_parties[1].hand_delivery if delivery_parties[1].knows_delivery_method else False}
+    - "regular_mail_2": ${delivery_parties[1].mail_delivery if delivery_parties[1].knows_delivery_method else False}
+    - "post_office_address_2": ${delivery_parties[1].regular_mail.on_one_line(bare=True) if delivery_parties[1].knows_delivery_method and delivery_parties[1].regular_mail else ""}
+    - "third_party_mail_2": ${delivery_parties[1].by_third_party if delivery_parties[1].knows_delivery_method else False}
+    - "third_party_address_2": ${delivery_parties[1].third_party.name.first + " " + delivery_parties[1].third_party.address.on_one_line(bare=True) if delivery_parties[1].knows_delivery_method and delivery_parties[1].by_third_party else ""}
+    - "efm_2": ${delivery_parties[1].efm_delivery if delivery_parties[1].knows_delivery_method else False}
+    - "by_email_2": ${delivery_parties[1].email_delivery if delivery_parties[1].knows_delivery_method else False}
+    - "prison_mail_2": ${delivery_parties[1].jail_delivery if delivery_parties[1].knows_delivery_method else False}
+    - "prison_name_2": ${delivery_parties[1].delivery_jail_name if delivery_parties[1].jail_delivery and delivery_parties[1].knows_delivery_method else ""}
+    - "date_delivered_2": ${delivery_parties[1].delivery_date if delivery_parties[1].knows_delivery_method else ""}
+    - "time_delivered_2": ${format_time(delivery_parties[1].delivery_time, format='h:mm') if delivery_parties[1].knows_delivery_method and delivery_parties[1].delivery_time != "" else ""}
+    - "delivered_am_2": ${True if format_time(delivery_parties[1].delivery_time, format='a') == "AM" and delivery_parties[1].knows_delivery_method else False}
+    - "delivered_pm_2": ${True if format_time(delivery_parties[1].delivery_time, format='a') == "PM" and delivery_parties[1].knows_delivery_method else False}
+    - "delivery_party_name_3": ${delivery_parties[2].lawyer.name.full(middle='full') if delivery_parties[2].is_represented else delivery_parties[2].name.full(middle='full')}
+    - "delivery_party_address_3": ${delivery_parties[2].address.on_one_line(bare=True)}
+    - "delivery_party_email_3": ${ delivery_parties[2].delivery_email}
+    - "hand_delivery_3": ${delivery_parties[2].hand_delivery if delivery_parties[2].knows_delivery_method else False}
+    - "regular_mail_3": ${delivery_parties[2].mail_delivery if delivery_parties[2].knows_delivery_method else False}
+    - "post_office_address_3": ${delivery_parties[2].regular_mail.on_one_line(bare=True) if delivery_parties[2].knows_delivery_method and delivery_parties[2].regular_mail else ""}
+    - "third_party_mail_3": ${delivery_parties[2].by_third_party if delivery_parties[2].knows_delivery_method else False}
+    - "third_party_address_3": ${delivery_parties[2].third_party.name.first + " " + delivery_parties[2].third_party.address.on_one_line(bare=True) if delivery_parties[2].knows_delivery_method and delivery_parties[2].by_third_party else ""}
+    - "efm_3": ${delivery_parties[2].efm_delivery if delivery_parties[2].knows_delivery_method else False}
+    - "by_email_3": ${delivery_parties[2].email_delivery if delivery_parties[2].knows_delivery_method else False}
+    - "prison_mail_3": ${delivery_parties[2].jail_delivery if delivery_parties[2].knows_delivery_method else False}
+    - "prison_name_3": ${delivery_parties[2].delivery_jail_name if delivery_parties[2].jail_delivery and delivery_parties[2].knows_delivery_method else ""}
+    - "date_delivered_3": ${delivery_parties[2].delivery_date if delivery_parties[2].knows_delivery_method else ""}
+    - "time_delivered_3": ${format_time(delivery_parties[2].delivery_time, format='h:mm') if delivery_parties[2].knows_delivery_method and delivery_parties[2].delivery_time != "" else ""}
+    - "delivered_am_3": ${True if format_time(delivery_parties[2].delivery_time, format='a') == "AM" and delivery_parties[2].knows_delivery_method else False}
+    - "delivered_pm_3": ${True if format_time(delivery_parties[2].delivery_time, format='a') == "PM" and delivery_parties[2].knows_delivery_method else False}
+    - "additional_proof": ${True if delivery_parties.number_gathered() > 3 else False}
+    - "user_signature": ${users[0].name.full(middle='full') if e_signature else ""}
+    - "user_street": ${users[0].address.line_one(bare=True)}
+    - "user_csz": ${users[0].address.line_two()}
+    - "user_name": ${users[0].name.full(middle='full')}
+    - "user_phone": ${phone_number_formatted(users[0].phone_number) if users[0].phone_number != "" else ""}
+---
+generic object: ALIndividual
+attachment:
+  variable name: x.additional_signatures[i]
+  name: additional_signatures
+  filename: additional_signatures
+  skip undefined: True
+  editable: False
+  pdf template file: foreclosure_defendant_signatures.pdf
+  fields:
+    - "filing_county": ${trial_court.address.county.upper()}
+    - "plaintiff_names": |
+        % if in_re_check:
+        ${ in_re_label }
+        % else:
+        ${comma_and_list(other_parties)}
+        % endif
+    - "defendant_names": |
+        % if in_re_check:
+        ${ "" }
+        % else:
+        ${comma_and_list(users)}
+        % endif
+    - "case_number": ${case_number}
+    - "codefendant_name_1": ${x.name.full(middle='full')}
+    - "codefendant_street_1": ${x.address.line_one(bare=True)}
+    - "codefendant_csz_1": ${x.address.line_two()}
+    - "codefendant_phone_1": ${phone_number_formatted(x.phone_number) if x.phone_number != "" else ""}
+    - "codefendant_name_2": ${x.second_person.name.full(middle='full')}
+    - "codefendant_street_2": ${x.second_person.address.line_one(bare=True)}
+    - "codefendant_csz_2": ${x.second_person.address.line_two()}
+    - "codefendant_phone_2": ${phone_number_formatted(x.second_person.phone_number) if x.second_person.phone_number != "" else ""}
+    - "codefendant_name_3": ${x.third_person.name.full(middle='full')}
+    - "codefendant_street_3": ${x.third_person.address.line_one(bare=True)}
+    - "codefendant_csz_3": ${x.third_person.address.line_two()}
+    - "codefendant_phone_3": ${phone_number_formatted(x.third_person.phone_number) if x.phone_number != "" else ""}
+    - "filing_county": {trial_court.address.county.upper()}
+---
+generic object: ALIndividual
+attachment:
+  variable name: x.additional_proof[i]
+  name: additional_proof
+  filename: additional_proof
+  skip undefined: True
+  editable: False
+  pdf template file: foreclosure_additional_delivery.pdf
+  fields:
+    - "case_number": ${case_number}
+    - "delivery_party_name_4": ${x.name.full(middle='full')}
+    - "delivery_party_address_4": ${x.address.on_one_line(bare=True)}
+    - "delivery_party_email_4": |
+        % if x.knows_delivery_method and (x.email_delivery or x.efm_delivery):
+        ${x.delivery_email}
+        % else:
+        ${""}
+        % endif
+    - "electronic_method_4": ${True if x.email_delivery or x.efm_delivery else False}
+    - "by_email_4": ${x.email_delivery}
+    - "efsp_4": ${x.efm_delivery}
+    - "physical_method_4": ${True if x.mail_delivery or x.by_third_party or x.hand_delivery or x.jail_delivery else False}
+    - "regular_or_third_mail_4": ${True if x.mail_delivery or x.by_third_party else False}
+    - "mailbox_third_party_city_4": |
+        % if x.mail_delivery:
+        ${x.regular_mail.city}
+        % elif x.by_third_party:
+        ${x.third_party.address.city}
+        % else:
+        ${""}
+        % endif
+    - "mailbox_third_party_state_4": |
+        % if x.mail_delivery:
+        ${x.regular_mail.state}
+        % elif x.by_third_party:
+        ${x.third_party.address.state}
+        % else:
+        ${""}
+        % endif
+    - "hand_delivery_4": ${x.hand_delivery}
+    - "hand_address_4": ${x.hand_delivery_address.on_one_line(bare=True)}
+    - "prison_mail_4": ${x.jail_delivery}
+    - "prison_name_4": ${x.delivery_jail_name}
+    - "delivery_date_4": ${x.delivery_date if x.knows_delivery_method else ""}
+    - "delivery_time_4": ${format_time(x.delivery_time, format='h:mm a') if x.knows_delivery_method and x.delivery_time != "" else ""}
+    - "only_one_on_sheet": ${False if x.include_two else True}
+    - "two_on_sheet": ${x.include_two}
+    - "delivery_party_name_5": ${x.second_person.name.full(middle='full')}
+    - "delivery_party_address_5": ${x.second_person.address.on_one_line(bare=True)}
+    - "delivery_party_email_5": |
+        % if x.second_person.knows_delivery_method and (x.second_person.email_delivery or x.second_person.efm_delivery):
+        ${x.second_person.delivery_email}
+        % else:
+        ${""}
+        % endif
+    - "electronic_method_5": ${True if x.second_person.email_delivery or x.second_person.efm_delivery else False}
+    - "by_email_5": ${x.second_person.email_delivery}
+    - "efsp_5": ${x.second_person.efm_delivery}
+    - "physical_method_5": ${True if x.second_person.mail_delivery or x.second_person.by_third_party or x.second_person.hand_delivery or x.second_person.jail_delivery else False}
+    - "regular_or_third_mail_5": ${True if x.second_person.mail_delivery or x.second_person.by_third_party else False}
+    - "mailbox_third_party_city_5": |
+        % if x.second_person.mail_delivery:
+        ${x.second_person.regular_mail.city}
+        % elif x.second_person.by_third_party:
+        ${x.second_person.third_party.address.city}
+        % else:
+        ${""}
+        % endif
+    - "mailbox_third_party_state_5": |
+        % if x.second_person.mail_delivery:
+        ${x.second_person.regular_mail.state}
+        % elif x.second_person.by_third_party:
+        ${x.second_person.third_party.address.state}
+        % else:
+        ${""}
+        % endif
+    - "hand_delivery_5": ${x.second_person.hand_delivery}
+    - "hand_address_5": ${x.second_person.hand_delivery_address.on_one_line(bare=True)}
+    - "prison_mail_5": ${x.second_person.jail_delivery}
+    - "prison_name_5": ${x.second_person.delivery_jail_name}
+    - "delivery_date_5": ${x.second_person.delivery_date if x.second_person.knows_delivery_method else ""}
+    - "delivery_time_5": ${format_time(x.second_person.delivery_time, format='h:mm a') if x.second_person.knows_delivery_method and x.second_person.delivery_time != "" else ""}
+    - "user_signature": ${users[0].name.full(middle='full') if e_signature else ""}
+    - "user_address": ${users[0].address.on_one_line(bare=True)}
+    - "user_name": ${users[0].name.full(middle='full')}
+    - "user_phone": ${phone_number_formatted(users[0].phone_number) if users[0].phone_number != "" else ""}
+---
+attachment:
+  variable name: additional_defenses[i]
+  name: additional_defenses
+  filename: additional_defenses
+  skip undefined: True
+  editable: False
+  pdf template file: foreclosure_additional_defenses.pdf
+  fields:
+    - "preview_watermark": ${ watermark if i=='preview' else '' }
+    - "filing_county": ${trial_court.address.county}
+    - "plaintiff_names": |
+        % if in_re_check:
+        ${ in_re_label }
+        % else:
+        ${comma_and_list(other_parties)}
+        % endif
+    - "defendant_names": |
+        % if in_re_check:
+        ${ "" }
+        % else:
+        ${comma_and_list(users)}
+        % endif
+    - "case_number": ${case_number}
+    - "additional_defenses_text": ${additional_defenses_description}
+    - "user_signature_with_s": ${ "/s" + users[0].name.full(middle='full') if e_signature else ""}
+    - "signing_defendant_name_1": ${signing_users[0].name.full(middle='full')}
+    - "signing_defendant_street_1": ${signing_users[0].address.line_one(bare=True)}
+    - "signing_defendant_csz_1": ${signing_users[0].address.line_two()}
+    - "signing_defendant_phone_1": ${phone_number_formatted(signing_users[0].phone) if signing_users.phone_number != "" else ""}}
+    - "signing_defendant_name_2": ${signing_users[1].name.full(middle='full')}
+    - "signing_defendant_street_2": ${signing_users[1].address.line_one(bare=True)}
+    - "signing_defendant_csz_2": ${signing_users[1].address.line_two()}
+    - "signing_defendant_phone_2": ${phone_number_formatted(signing_users[1].phone) if signing_users.phone_number != "" else ""}}
+    - "signing_defendant_name_3": ${signing_users[2].name.full(middle='full')}
+    - "signing_defendant_street_3": ${signing_users[2].address.line_one(bare=True)}
+    - "signing_defendant_csz_3": ${signing_users[2].address.line_two()}
+    - "signing_defendant_phone_3": ${phone_number_formatted(signing_users[2].phone) if signing_users.phone_number != "" else ""}}
+    - "additional_signatures": ${True if signing_users.number_gathered() > 3 else False}
+---
+attachment:
+  variable name: additional_answers[i]
+  name: additional_answers
+  filename: additional_answers
+  skip undefined: True
+  editable: False
+  pdf template file: foreclosure_additional_answer_paragraphs.pdf
+  fields:
+    - "filing_county": ${trial_court.address.county}
+    - "plaintiff_names": |
+        % if in_re_check:
+        ${ in_re_label }
+        % else:
+        ${comma_and_list(other_parties)}
+        % endif
+    - "defendant_names": |
+        % if in_re_check:
+        ${ "" }
+        % else:
+        ${comma_and_list(users)}
+        % endif
+    - "case_number": ${case_number}
+    - "paragraph_number_23": ${ answer_responses[22].para if complaint_labeled else '' }
+    - "paragraph_letter_23": ${ answer_responses[22].sub if complaint_labeled else '' }
+    - "paragraph_agree_23": ${ True if answer_responses[22].response == "Admit" and complaint_labeled else False }
+    - "paragraph_disagree_23": ${ True if answer_responses[22].response == "Deny" and complaint_labeled else False }
+    - "paragraph_idk_23": ${ True if answer_responses[22].response == "Do not know" and complaint_labeled else False }
+    - "paragraph_number_24": ${ answer_responses[23].para if complaint_labeled else '' }
+    - "paragraph_letter_24": ${ answer_responses[23].sub if complaint_labeled else '' }
+    - "paragraph_agree_24": ${ True if answer_responses[23].response == "Admit" and complaint_labeled else False }
+    - "paragraph_disagree_24": ${ True if answer_responses[23].response == "Deny" and complaint_labeled else False }
+    - "paragraph_idk_24": ${ True if answer_responses[23].response == "Do not know" and complaint_labeled else False }
+    - "paragraph_number_25": ${ answer_responses[24].para if complaint_labeled else '' }
+    - "paragraph_letter_25": ${ answer_responses[24].sub if complaint_labeled else '' }
+    - "paragraph_agree_25": ${ True if answer_responses[24].response == "Admit" and complaint_labeled else False }
+    - "paragraph_disagree_25": ${ True if answer_responses[24].response == "Deny" and complaint_labeled else False }
+    - "paragraph_idk_25": ${ True if answer_responses[24].response == "Do not know" and complaint_labeled else False }
+    - "paragraph_number_26": ${ answer_responses[25].para if complaint_labeled else '' }
+    - "paragraph_letter_26": ${ answer_responses[25].sub if complaint_labeled else '' }
+    - "paragraph_agree_26": ${ True if answer_responses[25].response == "Admit" and complaint_labeled else False }
+    - "paragraph_disagree_26": ${ True if answer_responses[25].response == "Deny" and complaint_labeled else False }
+    - "paragraph_idk_26": ${ True if answer_responses[25].response == "Do not know" and complaint_labeled else False }
+    - "paragraph_number_27": ${ answer_responses[26].para if complaint_labeled else '' }
+    - "paragraph_letter_27": ${ answer_responses[26].sub if complaint_labeled else '' }
+    - "paragraph_agree_27": ${ True if answer_responses[26].response == "Admit" and complaint_labeled else False }
+    - "paragraph_disagree_27": ${ True if answer_responses[26].response == "Deny" and complaint_labeled else False }
+    - "paragraph_idk_27": ${ True if answer_responses[26].response == "Do not know" and complaint_labeled else False }
+    - "paragraph_number_28": ${ answer_responses[27].para if complaint_labeled else '' }
+    - "paragraph_letter_28": ${ answer_responses[27].sub if complaint_labeled else '' }
+    - "paragraph_agree_28": ${ True if answer_responses[27].response == "Admit" and complaint_labeled else False }
+    - "paragraph_disagree_28": ${ True if answer_responses[27].response == "Deny" and complaint_labeled else False }
+    - "paragraph_idk_28": ${ True if answer_responses[27].response == "Do not know" and complaint_labeled else False }
+    - "paragraph_number_29": ${ answer_responses[28].para if complaint_labeled else '' }
+    - "paragraph_letter_29": ${ answer_responses[28].sub if complaint_labeled else '' }
+    - "paragraph_agree_29": ${ True if answer_responses[28].response == "Admit" and complaint_labeled else False }
+    - "paragraph_disagree_29": ${ True if answer_responses[28].response == "Deny" and complaint_labeled else False }
+    - "paragraph_idk_29": ${ True if answer_responses[28].response == "Do not know" and complaint_labeled else False }
+    - "paragraph_number_30": ${ answer_responses[29].para if complaint_labeled else '' }
+    - "paragraph_letter_30": ${ answer_responses[29].sub if complaint_labeled else '' }
+    - "paragraph_agree_30": ${ True if answer_responses[29].response == "Admit" and complaint_labeled else False }
+    - "paragraph_disagree_30": ${ True if answer_responses[29].response == "Deny" and complaint_labeled else False }
+    - "paragraph_idk_30": ${ True if answer_responses[29].response == "Do not know" and complaint_labeled else False }
+    - "paragraph_number_31": ${ answer_responses[30].para if complaint_labeled else '' }
+    - "paragraph_letter_31": ${ answer_responses[30].sub if complaint_labeled else '' }
+    - "paragraph_agree_31": ${ True if answer_responses[30].response == "Admit" and complaint_labeled else False }
+    - "paragraph_disagree_31": ${ True if answer_responses[30].response == "Deny" and complaint_labeled else False }
+    - "paragraph_idk_31": ${ True if answer_responses[30].response == "Do not know" and complaint_labeled else False }
+    - "paragraph_number_32": ${ answer_responses[31].para if complaint_labeled else '' }
+    - "paragraph_letter_32": ${ answer_responses[31].sub if complaint_labeled else '' }
+    - "paragraph_agree_32": ${ True if answer_responses[31].response == "Admit" and complaint_labeled else False }
+    - "paragraph_disagree_32": ${ True if answer_responses[31].response == "Deny" and complaint_labeled else False }
+    - "paragraph_idk_32": ${ True if answer_responses[31].response == "Do not know" and complaint_labeled else False }
+    - "paragraph_number_33": ${ answer_responses[32].para if complaint_labeled else '' }
+    - "paragraph_letter_33": ${ answer_responses[32].sub if complaint_labeled else '' }
+    - "paragraph_agree_33": ${ True if answer_responses[32].response == "Admit" and complaint_labeled else False }
+    - "paragraph_disagree_33": ${ True if answer_responses[32].response == "Deny" and complaint_labeled else False }
+    - "paragraph_idk_33": ${ True if answer_responses[32].response == "Do not know" and complaint_labeled else False }
+    - "paragraph_number_34": ${ answer_responses[33].para if complaint_labeled else '' }
+    - "paragraph_letter_34": ${ answer_responses[33].sub if complaint_labeled else '' }
+    - "paragraph_agree_34": ${ True if answer_responses[33].response == "Admit" and complaint_labeled else False }
+    - "paragraph_disagree_34": ${ True if answer_responses[33].response == "Deny" and complaint_labeled else False }
+    - "paragraph_idk_34": ${ True if answer_responses[33].response == "Do not know" and complaint_labeled else False }
+    - "paragraph_number_35": ${ answer_responses[34].para if complaint_labeled else '' }
+    - "paragraph_letter_35": ${ answer_responses[34].sub if complaint_labeled else '' }
+    - "paragraph_agree_35": ${ True if answer_responses[34].response == "Admit" and complaint_labeled else False }
+    - "paragraph_disagree_35": ${ True if answer_responses[34].response == "Deny" and complaint_labeled else False }
+    - "paragraph_idk_35": ${ True if answer_responses[34].response == "Do not know" and complaint_labeled else False }
+    - "paragraph_number_36": ${ answer_responses[35].para if complaint_labeled else '' }
+    - "paragraph_letter_36": ${ answer_responses[35].sub if complaint_labeled else '' }
+    - "paragraph_agree_36": ${ True if answer_responses[35].response == "Admit" and complaint_labeled else False }
+    - "paragraph_disagree_36": ${ True if answer_responses[35].response == "Deny" and complaint_labeled else False }
+    - "paragraph_idk_36": ${ True if answer_responses[35].response == "Do not know" and complaint_labeled else False }
+    - "paragraph_number_37": ${ answer_responses[36].para if complaint_labeled else '' }
+    - "paragraph_letter_37": ${ answer_responses[36].sub if complaint_labeled else '' }
+    - "paragraph_agree_37": ${ True if answer_responses[36].response == "Admit" and complaint_labeled else False }
+    - "paragraph_disagree_37": ${ True if answer_responses[36].response == "Deny" and complaint_labeled else False }
+    - "paragraph_idk_37": ${ True if answer_responses[36].response == "Do not know" and complaint_labeled else False }
+    - "paragraph_number_38": ${ answer_responses[37].para if complaint_labeled else '' }
+    - "paragraph_letter_38": ${ answer_responses[37].sub if complaint_labeled else '' }
+    - "paragraph_agree_38": ${ True if answer_responses[37].response == "Admit" and complaint_labeled else False }
+    - "paragraph_disagree_38": ${ True if answer_responses[37].response == "Deny" and complaint_labeled else False }
+    - "paragraph_idk_38": ${ True if answer_responses[37].response == "Do not know" and complaint_labeled else False }
+    - "paragraph_number_39": ${ answer_responses[38].para if complaint_labeled else '' }
+    - "paragraph_letter_39": ${ answer_responses[38].sub if complaint_labeled else '' }
+    - "paragraph_agree_39": ${ True if answer_responses[38].response == "Admit" and complaint_labeled else False }
+    - "paragraph_disagree_39": ${ True if answer_responses[38].response == "Deny" and complaint_labeled else False }
+    - "paragraph_idk_39": ${ True if answer_responses[38].response == "Do not know" and complaint_labeled else False }
+    - "paragraph_number_40": ${ answer_responses[39].para if complaint_labeled else '' }
+    - "paragraph_letter_40": ${ answer_responses[39].sub if complaint_labeled else '' }
+    - "paragraph_agree_40": ${ True if answer_responses[39].response == "Admit" and complaint_labeled else False }
+    - "paragraph_disagree_40": ${ True if answer_responses[39].response == "Deny" and complaint_labeled else False }
+    - "paragraph_idk_40": ${ True if answer_responses[39].response == "Do not know" and complaint_labeled else False }
+    - "paragraph_number_41": ${ answer_responses[40].para if complaint_labeled else '' }
+    - "paragraph_letter_41": ${ answer_responses[40].sub if complaint_labeled else '' }
+    - "paragraph_agree_41": ${ True if answer_responses[40].response == "Admit" and complaint_labeled else False }
+    - "paragraph_disagree_41": ${ True if answer_responses[40].response == "Deny" and complaint_labeled else False }
+    - "paragraph_idk_41": ${ True if answer_responses[40].response == "Do not know" and complaint_labeled else False }
+    - "paragraph_number_42": ${ answer_responses[41].para if complaint_labeled else '' }
+    - "paragraph_letter_42": ${ answer_responses[41].sub if complaint_labeled else '' }
+    - "paragraph_agree_42": ${ True if answer_responses[41].response == "Admit" and complaint_labeled else False }
+    - "paragraph_disagree_42": ${ True if answer_responses[41].response == "Deny" and complaint_labeled else False }
+    - "paragraph_idk_42": ${ True if answer_responses[41].response == "Do not know" and complaint_labeled else False }
+    - "paragraph_number_43": ${ answer_responses[42].para if complaint_labeled else '' }
+    - "paragraph_letter_43": ${ answer_responses[42].sub if complaint_labeled else '' }
+    - "paragraph_agree_43": ${ True if answer_responses[42].response == "Admit" and complaint_labeled else False }
+    - "paragraph_disagree_43": ${ True if answer_responses[42].response == "Deny" and complaint_labeled else False }
+    - "paragraph_idk_43": ${ True if answer_responses[42].response == "Do not know" and complaint_labeled else False }
+    - "paragraph_number_44": ${ answer_responses[43].para if complaint_labeled else '' }
+    - "paragraph_letter_44": ${ answer_responses[43].sub if complaint_labeled else '' }
+    - "paragraph_agree_44": ${ True if answer_responses[43].response == "Admit" and complaint_labeled else False }
+    - "paragraph_disagree_44": ${ True if answer_responses[43].response == "Deny" and complaint_labeled else False }
+    - "paragraph_idk_44": ${ True if answer_responses[43].response == "Do not know" and complaint_labeled else False }
+    - "paragraph_number_45": ${ answer_responses[44].para if complaint_labeled else '' }
+    - "paragraph_letter_45": ${ answer_responses[44].sub if complaint_labeled else '' }
+    - "paragraph_agree_45": ${ True if answer_responses[44].response == "Admit" and complaint_labeled else False }
+    - "paragraph_disagree_45": ${ True if answer_responses[44].response == "Deny" and complaint_labeled else False }
+    - "paragraph_idk_45": ${ True if answer_responses[44].response == "Do not know" and complaint_labeled else False }
+---
+id: case info review screen
+event: section_case_info
+section: Case info
+question: |
+  Case info
+subquestion: |
+  Edit your answers below.
+review: 
+  - Edit: users.revisit
+    button: |
+      **Your party: (Edit to change name, lawyer, address, and delivery info)**
+
+      % for my_var in users:
+        * ${ my_var.name.full(middle="full") }
+      % endfor
+  - Edit: other_parties.revisit
+    button: |
+      **The other party: (Edit to change name, lawyer, address, and delivery info)**
+
+      % for my_var in other_parties:
+        * ${ my_var.name.full(middle="full") }
+      % endfor
+  - Edit: in_re_check
+    button: |
+      **Does the court case have "In re:" in the name?**  
+      ${word(yesno(in_re_check))}
+  - Edit: in_re_label
+    button: |
+      **In re:** ${in_re_label}
+    show if: in_re_check  
+  - Edit: 
+      - trial_court_index
+      - recompute:
+        - trial_court
+    button: |
+      **County where this case is filed:**
+      ${ trial_court.address.county }
+  - Edit: case_number
+    button: |
+      **Case number:**
+      ${ case_number }   
+  - Edit: foreclosure_property.address
+    button: |
+      **Foreclosed property's address:**
+      ${foreclosure_property.on_one_line(bare=True)}
+  - Edit: working_with_lender
+    button: |
+      **Are you working with a lender on getting a loan modification?**
+      ${word(yesno(working_with_lender))}
+  - Edit: approved_modification
+    button: |
+      **Do you already have an approved loan modification?**
+      ${word(yesno(approved_modification))}
+  - Edit: housing_counselor
+    button: |
+      **Are you working with a housing counselor?**
+      ${word(yesno(housing_counselor))}
+  - Edit: counselor_company
+    button: |
+      **What company or agency does the housing counselor work for?**
+      ${counselor_company}
+    show if: housing_counselor
+  - Edit: counselor.name.first
+    button: |
+      **What is the housing counselor's name?**
+      ${counselor.name.full(middle='full')}
+    show if: housing_counselor
+---
+id: users review screen
+continue button field: users.revisit
+section: Case info
+question: |
+  Edit your party
+subquestion: |
+  ${ users.table }
+
+  ${ users.add_action() }
+---
+table: users.table
+rows: users
+columns:
+  - Name: |
+      row_item.name.full(middle="full") if defined("row_item.name.first") else ""
+  - Party, lawyer, address, and delivery info: |
+      action_button_html(url_action(row_item.attr_name("review_user_delivery")), label="Edit", icon="pencil-alt")
+delete buttons: True
+confirm: True
+---
+id: other parties review screen
+continue button field: other_parties.revisit
+section: Case info
+question: |
+    Edit the plaintiffs
+subquestion: |
+  ${ other_parties.table }
+
+  ${ other_parties.add_action() }
+---
+table: other_parties.table
+rows: other_parties
+columns:
+  - Name: |
+      row_item.name.full(middle="full") if defined("row_item.name.first") else ""
+  - Party, lawyer, address, and delivery info: |
+      action_button_html(url_action(row_item.attr_name("review_other_delivery")), label="Edit", icon="pencil-alt")
+delete buttons: True
+confirm: True
+---
+id: user party review screen
+continue button field: x.review_user_delivery
+section: Delivery details
+generic object: ALIndividual
+question: |
+  Edit ${ x.name.full(middle="full") }'s information
+subquestion: |  
+  % if x != users[0]:
+  If you don't see lawyer, address, or delivery information, then it might not be entered yet. Continue the program to answer all the questions.
+  % endif
+review: 
+  - Edit: x.name.first
+    button: |
+      **Party name:**
+      ${ x.name.full(middle="full")  }
+  - Edit: x.address.address
+    button: |
+      **Your address:**
+      ${x.address.on_one_line(bare=True)}
+    show if: x == users[0]
+  - Edit: x.phone_number
+    button: |
+      **Your phone number:**
+      ${ phone_number_formatted(x.phone_number) }
+    show if: x == users[0]
+  - Edit: x.has_email_address
+    button: |
+      **Do you have an email address?**
+      ${ word(yesno(x.email_notice)) }
+    show if: x == users[0]
+  - Edit: x.email
+    button: |
+      **Your email:**
+      ${ x.email }
+    show if: x == users[0] and x.has_email_address
+  - Edit: x.fully_agree
+    button: |
+      **Does ${x.name.full(middle='full')} fully agree with your responses?**
+      ${word(yesno(x.fully_agree))}
+  - Edit: x.is_represented
+    button: |
+      **Does ${ x.name.full(middle="full") } have a lawyer?**
+      % if x.is_represented is None:
+      I don't know
+      % else:
+      ${ word(yesno(x.is_represented)) }
+      % endif
+    show if: not x.fully_agree
+  - Edit: x.lawyer.name.first
+    button: |
+      **Lawyer name:**
+      ${ x.lawyer.name.full(middle="full") }
+    show if: x.is_represented and not x.fully_agree
+  - Edit: x.address.address
+    button: |
+      % if x.is_represented == True:
+      **${ x.lawyer.name.full(middle="full") }'s address:**
+      % else:
+      **${ x.name.full(middle="full") }'s address:**
+      % endif
+      ${ x.address.on_one_line(bare=True) }
+    show if: not x.fully_agree
+  - Edit: x.knows_delivery_method
+    button: |
+      **Do you know how you will deliver your forms to them?**
+      ${ word(yesno(x.knows_delivery_method)) }
+    show if: not x.fully_agree
+  - Edit: x.hand_delivery
+    button: |
+      **Delivery by: (Edit to view and change details)**
+      
+      % if x.efm_delivery == True:
+        * E-filing system
+      % endif
+      % if x.email_delivery == True:
+        * Email
+      % endif
+      % if x.hand_delivery == True:
+        * Hand
+      % endif
+      % if x.mail_delivery == True:
+        * US mail
+      % endif
+      % if x.by_third_party:
+        * Delivery company
+      % endif
+      % if x.jail_delivery == True:
+        * Mail from prison or jail
+      % endif
+    show if: x.knows_delivery_method and not x.fully_agree
+  - Edit: x.delivery_email
+    button: |
+      **Email address for delivery**:
+      ${x.delivery_email}
+    show if: x.knows_delivery_method and (x.efm_delivery or x.email_delivery) and not x.fully_agree
+  - Edit: x.regular_mail.address
+    button: |
+      **Address for mail delivery:**
+      ${x.regular_mail.on_one_line(bare=True)}
+    show if: x.knows_delivery_method and x.mail_delivery and not x.fully_agree
+  - Edit: x.third_party.name.first
+    button: |
+      **Delivery company**:
+      ${x.third_party.name.first}
+      ${x.third_party.address.on_one_line(bare=True)}
+    show if: x.knows_delivery_method and x.by_third_party and not x.fully_agree
+  - Edit: x.hand_delivery_address.address
+    button: |
+      **Address for hand delivery:**
+      ${x.hand_delivery_address.on_one_line(bare=True)}
+    show if: x.knows_delivery_method and x.hand_delivery and not x.fully_agree
+  - Edit: x.delivery_jail_name
+    button: |
+      **Name of prison or jail**:
+      ${x.delivery_jail_name}
+    show if: x.knows_delivery_method and x.jail_delivery and not x.fully_agree
+  - Edit: x.delivery_date
+    button: |
+      **Delivery on:**
+      % if x.knows_delivery_date == True and x.knows_delivery_time == True:
+      ${ x.delivery_date } at ${ format_time(x.delivery_time, "h:mm a") }
+      % else:
+      Incomplete date and time entered.
+      % endif
+    show if: x.knows_delivery_method and not x.fully_agree
+---
+id: other party review screen
+continue button field: x.review_other_delivery
+section: Delivery details
+generic object: ALIndividual
+question: |
+  Edit ${ x.name.full(middle="full") }'s information
+subquestion: |  
+  If you don't see lawyer, address, or delivery information, then it might not be entered yet. Continue the program to answer all the questions.
+review: 
+  - Edit: x.name.first
+    button: |
+      **Party name:**
+      ${ x.name.full(middle="full")  }
+  - Edit: x.is_represented
+    button: |
+      **Does ${ x.name.full(middle="full") } have a lawyer?**
+      % if x.is_represented is None:
+      I don't know
+      % else:
+      ${ word(yesno(x.is_represented)) }
+      % endif
+  - Edit: x.lawyer.name.first
+    button: |
+      **Lawyer name:**
+      ${ x.lawyer.name.full(middle="full") }
+    show if: x.is_represented
+  - Edit: x.address.address
+    button: |
+      % if x.is_represented == True:
+      **${ x.lawyer.name.full(middle="full") }'s address:**
+      % else:
+      **${ x.name.full(middle="full") }'s address:**
+      % endif
+      ${ x.address.on_one_line(bare=True) }
+  - Edit: x.knows_delivery_method
+    button: |
+      **Do you know how you will deliver your forms to them?**
+      ${ word(yesno(x.knows_delivery_method)) }
+  - Edit: x.hand_delivery
+    button: |
+      **Delivery by: (Edit to view and change details)**
+      
+      % if x.efm_delivery == True:
+        * E-filing system
+      % endif
+      % if x.email_delivery == True:
+        * Email
+      % endif
+      % if x.hand_delivery == True:
+        * Hand
+      % endif
+      % if x.mail_delivery == True:
+        * US mail
+      % endif
+      % if x.by_third_party:
+        * Delivery company
+      % endif
+      % if x.jail_delivery == True:
+        * Mail from prison or jail
+      % endif
+    show if: x.knows_delivery_method
+  - Edit: x.delivery_email
+    button: |
+      **Email address for delivery**:
+      ${x.delivery_email}
+    show if: x.knows_delivery_method and (x.efm_delivery or x.email_delivery)
+  - Edit: x.regular_mail.address
+    button: |
+      **Address for mail delivery:**
+      ${x.regular_mail.on_one_line(bare=True)}
+    show if: x.knows_delivery_method and x.mail_delivery
+  - Edit: x.third_party.name.first
+    button: |
+      **Delivery company**:
+      ${x.third_party.name.first}
+      ${x.third_party.address.on_one_line(bare=True)}
+    show if: x.knows_delivery_method and x.by_third_party
+  - Edit: x.hand_delivery_address.address
+    button: |
+      **Address for hand delivery:**
+      ${x.hand_delivery_address.on_one_line(bare=True)}
+    show if: x.knows_delivery_method and x.hand_delivery
+  - Edit: x.delivery_jail_name
+    button: |
+      **Name of prison or jail**:
+      ${x.delivery_jail_name}
+    show if: x.knows_delivery_method and x.jail_delivery
+  - Edit: x.delivery_date
+    button: |
+      **Delivery on:**
+      % if x.knows_delivery_date == True and x.knows_delivery_time == True:
+      ${ x.delivery_date } at ${ format_time(x.delivery_time, "h:mm a") }
+      % else:
+      Incomplete date and time entered.
+      % endif
+    show if: x.knows_delivery_method
+---
+id: responses section review screen
+event: section_answer
+section: Responses
+question: |
+  Responses
+subquestion: |
+  ${ answer_responses.table }
+  % if answer_responses.number_gathered() < 45:
+  
+  ${ answer_responses.add_action() }
+  % endif
+review:
+  - Edit: users[0].name.first
+    button: |
+      **Your Name:**
+      ${users[0].name.full(middle='full')}
+    show if: users[0].name.middle == "This button should not appear. I have only included this Edit so that this review section could just go directly to the answer_responses table. Hopefully no one's legal middle name is these three sentences."
+---
+id: answers review screen
+continue button field: answer_responses.revisit
+section: Responses
+question: |
+  Edit your responses
+subquestion: |
+  ${ answer_responses.table }
+  % if answer_responses.number_gathered() < 45:
+  
+  ${ answer_responses.add_action() }
+  % endif
+---
+table: answer_responses.table
+rows: answer_responses
+columns:
+  - Paragraph: |
+      row_item.para
+  - Subparagraph: |
+      row_item.sub if defined("row_item.sub") else ""
+  - Response: |
+      row_item.response
+  - Actions: |
+      action_button_html(url_action(row_item.attr_name("review_responses")), label="Edit", icon="pencil-alt")
+delete buttons: True
+confirm: True
+---
+id: answer response review screen
+continue button field: x.review_responses
+section: Responses
+generic object: DAObject
+question: |
+  Edit your response
+review: 
+  - Edit: x.para
+    button: |
+      **Paragraph letter:**
+      ${ x.para  }
+  - Edit: x.sub
+    button: |
+      **Subparagraph number:**
+      ${ x.sub }
+  - Edit: x.response
+    button: |
+      **Response:**
+      ${ x.response }
+---
+id: defenses section review screen
+event: section_defenses
+section: Affirmative defenses
+question: |
+  Affirmative defenses
+subquestion: |
+  Edit your answers below.
+review:
+  - Edit: assorted_defenses
+    button: |
+      **Which of the specific defenses apply to your case?**
+      
+      % if assorted_defenses['wrong_deny']:
+      * My mortgage company wrongfully denied my application for a loan modification.
+      % endif
+      % if assorted_defenses['fail_respond']:
+      * My mortgage company failed to respond to my request for a mortgage modification.
+      % endif
+      % if assorted_defenses['under_review']:
+      * I had a loan modification application under review with my mortgage company when the foreclosure case was filed.
+      % endif
+      % if assorted_defenses['less_than_3']:
+      * My refinance or home equity loan is less than 3 years old and the lender did not accurately tell me information about the loan's Annual Percentage Rate (APR), finance charge(s), amount financed, total of payments or schedule of payments.
+      % endif
+      % if assorted_defenses['unreasonable_broker']:
+      * My broker received an unreasonable lump-sum payment (commission) for brokering the loan.
+      % endif
+      % if assorted_defenses['contractor']:
+      * A contractor started the loan as part of a home repair contract.
+      % endif
+      % if assorted_defenses['forced_insurance']:
+      * I have my own insurance, and the lender has added an insurance premium to my account (force-placed insurance).
+      % endif
+      % if assorted_defenses['not_applied']:
+      * My lender has not applied all of my payments to my account.
+      % endif
+      % if assorted_defenses.all_false():
+      * None of the specific defenses apply to my case.
+      % endif
+  - Edit: has_defenses
+    button: |
+      **Do you have any affirmative defenses?**
+      ${word(yesno(has_defenses))}
+    show if: assorted_defenses.all_false()
+  - Edit: defenses_description
+    button: |
+      **Your defenses:**
+      ${defenses_description}
+    show if: has_defenses
+  - Edit: add_defenses_page
+    button: |
+      **Do you need an additional page to list your defenses?**:
+      ${word(yesno(add_defenses_page))}
+    show if: has_defenses
+  - Edit: additional_defenses_description
+    button: |
+      **Your defenses (2nd page):**
+      ${additional_defenses_description}
+    show if: has_defenses and add_defenses_page
+---
+id: delivery info review screen
+event: section_delivery
+section: Delivery details
+question: |
+  Delivery details
+subquestion: |
+  Edit your answers below.
+review:
+  - Edit: users.revisit
+    button: |
+      **Your party: (Edit to change name, lawyer, address, and delivery info)**
+
+      % for my_var in users:
+        * ${ my_var.name.full(middle="full") }
+      % endfor
+  - Edit: other_parties.revisit
+    button: |
+      **The other party: (Edit to change name, lawyer, address, and delivery info)**
+
+      % for my_var in other_parties:
+        * ${ my_var.name.full(middle="full") }
+      % endfor
+---
+id: about you review screen
+event: section_about_you
+section: About you
+question: |
+  About you
+subquestion: |
+  Edit your answers below.
+review:
+  - Edit: users[0].name.first
+    button: |
+      **Your name:**
+      ${ users[0].name.full(middle="full") }
+  - Edit: users[0].address.address
+    button: |
+      **Your address:**
+      ${ users[0].address.on_one_line(bare=True) }
+  - Edit: users[0].phone_number
+    button: |
+      **Your phone number:**
+      ${ phone_number_formatted(users[0].phone_number) }
+  - Edit: users[0].has_email_address
+    button: |
+      **Do you have an email address?**
+      ${ word(yesno(users[0].email_notice)) }
+  - Edit: users[0].email
+    button: |
+      **Your email:**
+      ${ users[0].email }
+    show if: users[0].has_email_address
+  - Edit: pronouns_none
+    button: |
+      **What pronouns do you want the court to use?**
+      % if pronouns_none:
+      None specified
+      % else:
+      
+      % if pronouns['She/her']:
+      * She/her
+      % endif
+      % if pronouns['He/him']:
+      * He/him
+      % endif
+      % if pronouns['They/them']:
+      * They/them
+      % endif
+      % if pronouns['Other']:
+      * ${other_pronouns}
+      % endif
+      % endif
+  - Edit: prefix_none
+    button: |
+      **What prefix do you want the court to use?**
+      % if prefix_none:
+      None specified
+      % else:
+      
+      % if prefix['Ms.']:
+      * Ms.
+      % endif
+      % if prefix['Mr.']:
+      * Mr.
+      % endif
+      % if prefix['Mx.']:
+      * Mx.
+      % endif
+      % if prefix['Other']:
+      * ${other_prefix}
+      % endif
+      % endif
+  - Edit: e_signature
+    button: |
+      **Do you want to add your e-signature to your forms?**
+      ${ word(yesno(e_signature)) }
+---
+id: review screen
+event: review_answers
+question: |
+  Review screen
+subquestion: |
+  Edit your answers below.
+review: 
+  - Edit: users.revisit
+    button: |
+      **Your party: (Edit to change name, lawyer, address, and delivery info)**
+
+      % for my_var in users:
+        * ${ my_var.name.full(middle="full") }
+      % endfor
+  - Edit: other_parties.revisit
+    button: |
+      **The other party: (Edit to change name, lawyer, address, and delivery info)**
+
+      % for my_var in other_parties:
+        * ${ my_var.name.full(middle="full") }
+      % endfor
+  - Edit: in_re_check
+    button: |
+      **Does the court case have "In re:" in the name?**  
+      ${word(yesno(in_re_check))}
+  - Edit: in_re_label
+    button: |
+      **In re:** ${in_re_label}
+    show if: in_re_check  
+  - Edit: 
+      - trial_court_index
+      - recompute:
+        - trial_court
+    button: |
+      **County where this case is filed:**
+      ${ trial_court.address.county }
+  - Edit: case_number
+    button: |
+      **Case number:**
+      ${ case_number }   
+  - Edit: foreclosure_property.address
+    button: |
+      **Foreclosed property's address:**
+      ${foreclosure_property.on_one_line(bare=True)}
+  - Edit: working_with_lender
+    button: |
+      **Are you working with a lender on getting a loan modification?**
+      ${word(yesno(working_with_lender))}
+  - Edit: approved_modification
+    button: |
+      **Do you already have an approved loan modification?**
+      ${word(yesno(approved_modification))}
+  - Edit: housing_counselor
+    button: |
+      **Are you working with a housing counselor?**
+      ${word(yesno(housing_counselor))}
+  - Edit: counselor_company
+    button: |
+      **What company or agency does the housing counselor work for?**
+      ${counselor_company}
+    show if: housing_counselor
+  - Edit: counselor.name.first
+    button: |
+      **What is the housing counselor's name?**
+      ${counselor.name.full(middle='full')}
+    show if: housing_counselor
+  - Edit: answer_responses.revisit
+    button: |
+      **Your responses: (Edit to change paragaph, subparagraph, and response)**
+
+      % for paragraph in answer_responses:
+        * ${ paragraph.para + paragraph.sub + " (" + paragraph.response + ")"}
+      % endfor
+  - Edit: assorted_defenses
+    button: |
+      **Which of the specific defenses apply to your case?**
+      
+      % if assorted_defenses['wrong_deny']:
+      * My mortgage company wrongfully denied my application for a loan modification.
+      % endif
+      % if assorted_defenses['fail_respond']:
+      * My mortgage company failed to respond to my request for a mortgage modification.
+      % endif
+      % if assorted_defenses['under_review']:
+      * I had a loan modification application under review with my mortgage company when the foreclosure case was filed.
+      % endif
+      % if assorted_defenses['less_than_3']:
+      * My refinance or home equity loan is less than 3 years old and the lender did not accurately tell me information about the loan's Annual Percentage Rate (APR), finance charge(s), amount financed, total of payments or schedule of payments.
+      % endif
+      % if assorted_defenses['unreasonable_broker']:
+      * My broker received an unreasonable lump-sum payment (commission) for brokering the loan.
+      % endif
+      % if assorted_defenses['contractor']:
+      * A contractor started the loan as part of a home repair contract.
+      % endif
+      % if assorted_defenses['forced_insurance']:
+      * I have my own insurance, and the lender has added an insurance premium to my account (force-placed insurance).
+      % endif
+      % if assorted_defenses['not_applied']:
+      * My lender has not applied all of my payments to my account.
+      % endif
+      % if assorted_defenses.all_false():
+      * None of the specific defenses apply to my case.
+      % endif
+  - Edit: has_defenses
+    button: |
+      **Do you have any affirmative defenses?**
+      ${word(yesno(has_defenses))}
+    show if: assorted_defenses.all_false()
+  - Edit: defenses_description
+    button: |
+      **Your defenses:**
+      ${defenses_description}
+    show if: has_defenses
+  - Edit: add_defenses_page
+    button: |
+      **Do you need an additional page to list your defenses?**:
+      ${word(yesno(add_defenses_page))}
+    show if: has_defenses
+  - Edit: additional_defenses_description
+    button: |
+      **Your defenses (2nd page):**
+      ${additional_defenses_description}
+    show if: has_defenses and add_defenses_page
+  - Edit: users[0].name.first
+    button: |
+      **Your name:**
+      ${ users[0].name.full(middle="full") }
+  - Edit: users[0].address.address
+    button: |
+      **Your address:**
+      ${ users[0].address.on_one_line(bare=True) }
+  - Edit: users[0].phone_number
+    button: |
+      **Your phone number:**
+      ${ phone_number_formatted(users[0].phone_number) }
+  - Edit: users[0].has_email_address
+    button: |
+      **Do you have an email address?**
+      ${ word(yesno(users[0].email_notice)) }
+  - Edit: users[0].email
+    button: |
+      **Your email:**
+      ${ users[0].email }
+    show if: users[0].has_email_address
+  - Edit: pronouns_none
+    button: |
+      **What pronouns do you want the court to use?**
+      % if pronouns_none:
+      None specified
+      % else:
+      
+      % if pronouns['She/her']:
+      * She/her
+      % endif
+      % if pronouns['He/him']:
+      * He/him
+      % endif
+      % if pronouns['They/them']:
+      * They/them
+      % endif
+      % if pronouns['Other']:
+      * ${other_pronouns}
+      % endif
+      % endif
+  - Edit: prefix_none
+    button: |
+      **What prefix do you want the court to use?**
+      % if prefix_none:
+      None specified
+      % else:
+      
+      % if prefix['Ms.']:
+      * Ms.
+      % endif
+      % if prefix['Mr.']:
+      * Mr.
+      % endif
+      % if prefix['Mx.']:
+      * Mx.
+      % endif
+      % if prefix['Other']:
+      * ${other_prefix}
+      % endif
+      % endif
+  - Edit: e_signature
+    button: |
+      **Do you want to add your e-signature to your forms?**
+      ${ word(yesno(e_signature)) }
