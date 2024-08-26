@@ -128,8 +128,9 @@ code: |
   nav.set_section('section_about_you')
   users[0].address.address
   users[0].has_email_address
-  pronouns_none
-  prefix_none
+  #The pronouns and prefix variables are frome the respond to a lawsuit program. The respond to foreclosure complaint forms don't have the corresponding fields, but I have left them in the program in case a future forms update adds them.
+  #pronouns_none
+  #prefix_none
   e_signature
 
   set_progress(100)
@@ -350,7 +351,7 @@ subquestion: |
 ---
 id: other parties there is another
 question: |
-  Is there any other plaintiff or petitioner in this matter?
+  Are there any other plaintiffs or petitioners in this matter?
 subquestion: |
   % if len(other_parties.elements) >= 1:  
   So far you have told us about ${comma_and_list(other_parties.complete_elements().full_names())}.
@@ -1512,17 +1513,22 @@ content: |
   [Illinois Legal Aid Online](https://www.illinoislegalaid.org)
 ---
 objects:
-  - al_user_bundle: ALDocumentBundle.using(elements=[instructions, appearance_answer, additional_answers, additional_defenses, additional_proof_bundle, additional_signatures_bundle], filename="respond_to_foreclosure_complaint.pdf", title="All forms")
-  - al_court_bundle: ALDocumentBundle.using(elements=[appearance_answer, additional_answers, additional_defenses, additional_proof_bundle, additional_signatures_bundle], filename="respond_to_foreclosure_complaint.pdf", title="Foreclosure Complaint Appearance and Answer")
+  - al_user_bundle: ALDocumentBundle.using(elements=[instructions, answer_bundle], filename="respond_to_foreclosure_complaint.pdf", title="All forms")
+  - al_court_bundle: ALDocumentBundle.using(elements=[appearance_answer, answer_bundle], filename="respond_to_foreclosure_complaint.pdf", title="Foreclosure Complaint Appearance and Answer")
+---
+objects:
+  - answer_bundle: ALDocumentBundle.using(elements=[appearance_answer, additional_answers, additional_defenses, additional_proof_bundle, additional_signatures_bundle], filename="respond_to_foreclosure_complaint.pdf", title="Appearance and Answer")
 ---
 reconsider: True
 code: |
   instructions.enabled = True
+  answer_bundle.enabled = True
   appearance_answer.enabled = True
   additional_defenses.enabled = False
   additional_answers.enabled = False
-  if add_defenses_page:
-    additional_defenses.enabled = True
+  if has_defenses:
+    if add_defenses_page:
+      additional_defenses.enabled = True
   if answer_responses.number_gathered() > 22:
     additional_answers.enabled = True
 ---
@@ -1879,7 +1885,6 @@ attachment:
     - "codefendant_street_3": ${x.third_person.address.line_one(bare=True)}
     - "codefendant_csz_3": ${x.third_person.address.line_two()}
     - "codefendant_phone_3": ${phone_number_formatted(x.third_person.phone_number) if x.phone_number != "" else ""}
-    - "filing_county": {trial_court.address.county.upper()}
 ---
 generic object: ALIndividual
 attachment:
@@ -1984,7 +1989,7 @@ attachment:
         % else:
         ${comma_and_list(other_parties)}
         % endif
-    - "defendant_names": |
+    - "all_defendant_names": |
         % if in_re_check:
         ${ "" }
         % else:
