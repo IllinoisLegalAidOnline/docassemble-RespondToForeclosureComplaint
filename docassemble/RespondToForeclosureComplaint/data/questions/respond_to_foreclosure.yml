@@ -1,6 +1,6 @@
  metadata:
   title: Respond to a mortgage foreclosure complaint
-  short title: Mortgage foreclosure response
+  short title: Respond to a foreclosure
   comment: This program makes the forms to respond to a mortgage foreclosure complaint.
   authors:
     - Vivian McNaughton
@@ -77,13 +77,15 @@ code: |
   trial_court
   case_number
   foreclosure_property.address
+  
+    
+  nav.set_section('section_answer')
   working_with_lender
   approved_modification
   if housing_counselor:
     counselor.name.first
-    
-  nav.set_section('section_answer')
   answer_intro
+  illinois_law_note
   #The complaint_labeled variable is currently set to always be true because the mortgage forclosure answer form does not have fields for unlabeled complaint responses.
   complaint_labeled = True
   if complaint_labeled:
@@ -94,7 +96,7 @@ code: |
     unlabeled_intro
     unlabeled_admit
     unlabeled_idk
-  illinois_law_note
+  
   nav.set_section('section_defenses')
   defenses_intro 
   #The following three questions are only asked to check whether to run the defense_legal_help continue button field page. This is holdover behavior from the LHI version of this program. I have also added a code block that creates a default answer for defenses_description including any assorted_defenses checkboxes marked as True.
@@ -107,14 +109,16 @@ code: |
     if add_defenses_page:
       additional_defenses_description
       preview_additional_defenses
-  for index, party in enumerate(users):
-    if index > 0:
-      if party.fully_agree:
-        party.need_signature
-        party.address.address
-        party.phone_number
-      else:
-        party.will_need_copy
+  if users.number_gathered() > 1:
+    agreement_intro
+    for index, party in enumerate(users):
+      if index > 0:
+        if party.fully_agree:
+          party.need_signature
+          party.address.address
+          party.phone_number
+        else:
+          party.will_need_copy
   
   nav.set_section('section_delivery')
   delivery_intro
@@ -216,7 +220,7 @@ subquestion: |
 
   If you received a Mortgage Foreclosure Complaint, you have been sued. Your Summons either lists a court date or a deadline for filing Appearance and Answer forms. This program helps you respond to a foreclosure lawsuit when the Summons lists a deadline for filing forms. It makes different forms depending on how you want to respond.
   
-  A **Mortgage Foreclosure Appearance & Answer** tells the court and the other parties that you are participating in the court case and how you respond to what is written in the Complaint.
+  A *Mortgage Foreclosure Appearance & Answer* tells the court and the other parties that you are participating in the court case and how you respond to what is written in the Complaint.
   
   To learn more, read ILAO's article about [**responding to a mortgage foreclosure case**](https://www.illinoislegalaid.org/legal-information/responding-mortgage-foreclosure-case).
 field: sees_nav_bar
@@ -252,7 +256,7 @@ continue button field: whats_next
 question: |
   After you finish this program
 subquestion: |
-  After you download your **Mortgage Foreclosure Appearance & Answer** form, you must file them with the court. This program does not file your forms for you.
+  After you download your *Mortgage Foreclosure Appearance & Answer* forms, you must file them with the court. This program does not file your forms for you.
   
   If you have **{Defenses}**, you must file those forms with the court as well.
   
@@ -269,7 +273,7 @@ continue button field: lawsuit_information
 question: |
   Lawsuit information
 subquestion: |
-  The **Mortgage Foreclosure Appearance & Answer** tells the court you know about the foreclosure case and whether you agree or disagree with what was said in the Mortgage Foreclosure Complaint. It also allows you to tell the court what defenses you have.
+  The *Mortgage Foreclosure Appearance & Answer* tells the court you know about the foreclosure case and whether you agree or disagree with what was said in the Mortgage Foreclosure Complaint. It also allows you to tell the court what defenses you have.
   
   You must file within 30 days after you got the Mortgage Foreclosure Complaint. If you do not respond by then, you can ask the court for an extension of time using ILAO's [**Motion to continue or extend time Easy Form**](https://www.illinoislegalaid.org/legal-information/motion-continue-or-extend-time).
   
@@ -419,6 +423,33 @@ subject: |
 content: |
   If the party has a long name like "Jane Smith, Director of Housing," select **Business or organization**. You can then enter the full name and title.
 ---
+sets:
+  - other_parties[i].name.first
+  - other_parties[i].name.last
+  - other_parties[i].name.middle
+  - other_parties[i].name.suffix
+id: names of opposing parties
+question: |
+  Name of ${ ordinal(i) } **plaintiff** in this case
+subquestion: |
+    ${ collapse_template(long_name_help) }
+fields:
+  - code: |
+      other_parties[i].name_fields(person_or_business='unsure')
+---
+id: any other users
+question: |
+    Is anyone else on your side of the foreclosure case?
+subquestion: |
+  % if len(users.elements) > 1:  
+  So far you have told us about ${comma_and_list(users.complete_elements())}.
+  % else:
+  If there are other defendants besides you, click **Yes**.
+  % endif
+fields:
+  - no label: users.there_is_another
+    datatype: yesnoradio
+---
 id: case number
 question: |
   What is the case number?
@@ -452,11 +483,20 @@ fields:
       states_list() 
   - ZIP code: foreclosure_property.zip
 ---
+id: agreement intro
+continue button field: agreement_intro
+question: |
+    Other defendants
+subquestion: |
+    If the other defendants agree with your responses and defenses, they can join your *Mortgage Foreclosure Appearance & Answer*. This program can add their information to your forms.
+
+    Any defendents who join you will need to sign the forms before you file them.
+---
 id: users fully agree
 question: |
   Does ${users[i].name.full(middle='full')} fully agree with you and your responses to the foreclosure complaint?
 subquestion: |
-  If ${users[i].name.full(middle='full')} has any other responses or defenses they would put in the response, click **No**.
+  If ${users[i].name.full(middle='full')} plans to file their own forms, click **No**.
 fields:
   - no label: users[i].fully_agree
     datatype: yesnoradio
@@ -504,7 +544,7 @@ fields:
 ---
 id: counselor company counselor name
 question: |
-  What is the name of the housing counselor and the company or agency they work for?
+  Who is the housing counselor you are working with?
 fields:
   - First: counselor.name.first
   - Middle: counselor.name.middle
@@ -516,18 +556,18 @@ fields:
     required: False
   - Company or agency name: counselor.agency
 ---
-id: counselor name
-question: |
-  What is the housing counselor's name?
-fields:
-  - First: counselor.name.first
-  - Middle: counselor.name.middle
-    required: False
-  - Last: counselor.name.last
-  - Suffix: counselor.name.suffix
-    code: |
-      name_suffix()
-    required: False
+#id: counselor name
+#question: |
+#  What is the housing counselor's name?
+#fields:
+#  - First: counselor.name.first
+#  - Middle: counselor.name.middle
+#    required: False
+#  - Last: counselor.name.last
+#  - Suffix: counselor.name.suffix
+#    code: |
+#      name_suffix()
+#    required: False
 ---
 id: answer intro
 continue button field: answer_intro
@@ -560,7 +600,7 @@ question: |
 subquestion: |
   When you use file a *Mortgage Foreclosure Appearance & Answer* you may be admitting that certain facts are true, like that you were given the required notices about the default on the mortgage. 
   
-  This is because some facts do not need to be listed in an approved form foreclosure complaint.
+  This is because some facts do not need to be listed in an approved foreclosure complaint form.
 ---
 id: answer responses
 sets:
@@ -721,7 +761,7 @@ continue button field: defenses_intro
 question: |
   Defenses
 subquestion: |  
-  You can include defenses against the Complaint in your Appearance & Answer. You may need to state facts that support your defenses.
+  You can include defenses against the Complaint in your *Mortgage Foreclosure Appearance & Answer*. You may need to state facts that support your defenses.
 
   **Note:** You will have to prove your defenses in court with evidence such as documents.
 
@@ -732,6 +772,8 @@ question: |
   Do any of the following defenses apply to your case?
 subquestion: |
   Select all that apply.
+
+  This program will add the defenses you select to your forms. You will be able to edit the text on another screen.
 fields:
   - "Defenses": assorted_defenses
     datatype: checkboxes
@@ -803,6 +845,10 @@ id: defenses description
 question: |
   Describe any defenses you have in your own words. 
 subquestion: |  
+  % if assorted_defenses.any_true():
+  This text includes the defenses you chose earlier.
+
+  % endif
   You may need to provide facts that support your defenses.
   
   If you need more room to explain, you can add an additional page. You can preview how your answer looks on the form on the next screen.
@@ -810,7 +856,7 @@ fields:
   - label: Defenses
     field: defenses_description
     input type: area
-    rows: 15
+    rows: 19
     maxlength: 850
     default: |
       ${default_defenses}
@@ -829,7 +875,7 @@ subquestion: |
 
   ${ appearance_answer.as_pdf(key='preview').extract_pages(first=2, last=2) }
   
-  If you want to make changes, click **Back** or go to the [**Defenses**](${ url_action('section_defenses') }) section. If you do not want to make changes or you need more space, click **Next**.
+  If you want to make changes, click **Back** or go to the [**Defenses**](${ url_action('section_defenses') }) section. If you do not want to make changes or if you need more space, click **Next**.
 ---
 id: add defenses page
 question: |
@@ -844,11 +890,12 @@ question: |
 subquestion: |  
   You may need to provide facts that support your defenses.
   
-  You can preview how your answer looks on the form on the next screen.
+  You can preview how your additional defenses look on the form on the next screen.
   
   ${collapse_template(defense_thus_far)}
 fields:
-  - label: Defenses
+  - label: Additional defenses
+    label above field: True
     field: additional_defenses_description
     input type: area
     rows: 18
@@ -867,7 +914,7 @@ reconsider:
 question: |
   Additional Defenses preview
 subquestion: |
-  Click the image below to preview page 2 of your *Additional Defenses for Mortgage Foreclosure Appearance & Answer*.
+  Click the image below to preview page 1 of your *Additional Defenses for Mortgage Foreclosure Appearance & Answer*.
   
   **Note: this is not a complete form.** Finish the program to get all your forms.
  
@@ -1520,7 +1567,7 @@ content: |
 ---
 objects:
   - al_user_bundle: ALDocumentBundle.using(elements=[instructions, answer_bundle], filename="respond_to_foreclosure_complaint.pdf", title="All forms")
-  - al_court_bundle: ALDocumentBundle.using(elements=[appearance_answer, answer_bundle], filename="respond_to_foreclosure_complaint.pdf", title="Foreclosure Complaint Appearance and Answer")
+  - al_court_bundle: ALDocumentBundle.using(elements=[appearance_answer, answer_bundle], filename="respond_to_foreclosure_complaint.pdf", title="Foreclosure Complaint Appearance & Answer")
 ---
 objects:
   - answer_bundle: ALDocumentBundle.using(elements=[appearance_answer, additional_answers, additional_defenses, additional_signatures_bundle, additional_proof_bundle], filename="respond_to_foreclosure_complaint.pdf", title="Mortgage Foreclosure Appearance and Answer")
@@ -1780,15 +1827,15 @@ attachment:
     - "defendant_name_1": ${signing_users[0].name.full(middle='full')}
     - "defendant_street_1": ${signing_users[0].address.line_one(bare=True)}
     - "defendant_csz_1": ${signing_users[0].address.line_two()}
-    - "defendant_phone_1": ${phone_number_formatted(signing_users[0].phone_number) if signing_users.phone_number != "" else ""}
+    - "defendant_phone_1": ${phone_number_formatted(signing_users[0].phone_number)}
     - "defendant_name_2": ${signing_users[1].name.full(middle='full')}
     - "defendant_street_2": ${signing_users[1].address.line_one(bare=True)}
     - "defendant_csz_2": ${signing_users[1].address.line_two()}
-    - "defendant_phone_2": ${phone_number_formatted(signing_users[1].phone) if signing_users.phone_number != "" else ""}
+    - "defendant_phone_2": ${phone_number_formatted(signing_users[1].phone_number)}
     - "defendant_name_3": ${signing_users[2].name.full(middle='full')}
     - "defendant_street_3": ${signing_users[2].address.line_one(bare=True)}
     - "defendant_csz_3": ${signing_users[2].address.line_two()}
-    - "defendant_phone_3": ${phone_number_formatted(signing_users[2].phone) if signing_users.phone_number != "" else ""}
+    - "defendant_phone_3": ${phone_number_formatted(signing_users[2].phone_number)}
     - "additional_signatures": ${True if signing_users.number_gathered() > 3 else False}
     - "agree_to_email": ${users[0].has_email_address}
     - "user_email": ${users[0].email if users[0].has_email_address else ""}
@@ -1803,7 +1850,7 @@ attachment:
     - "hand_delivery_1": ${delivery_parties[0].hand_delivery if delivery_parties[0].knows_delivery_method else False}
     - "regular_mail_1": ${delivery_parties[0].mail_delivery if delivery_parties[0].knows_delivery_method else False}
     #JUMP
-    - "post_office_address_1": ${delivery_parties[0].delivery_mail_city + ", " + delivery_parties[0].delivery_mail_state if delivery_parties[0].knows_delivery_method and delivery_parties[0].regular_mail else ""}
+    - "post_office_address_1": ${delivery_parties[0].delivery_mail_city + ", " + delivery_parties[0].delivery_mail_state if delivery_parties[0].knows_delivery_method and delivery_parties[0].mail_delivery else ""}
     - "third_party_mail_1": ${delivery_parties[0].by_third_party if delivery_parties[0].knows_delivery_method else False}
     - "third_party_address_1": ${delivery_parties[0].third_delivery_mail_city + ", " + delivery_parties[0].third_delivery_mail_state if delivery_parties[0].knows_delivery_method and delivery_parties[0].by_third_party else ""}
     - "efm_1": ${delivery_parties[0].efm_delivery if delivery_parties[0].knows_delivery_method else False}
@@ -1824,7 +1871,7 @@ attachment:
     - "delivery_party_email_2": ${ delivery_parties[1].delivery_email}
     - "hand_delivery_2": ${delivery_parties[1].hand_delivery if delivery_parties[1].knows_delivery_method else False}
     - "regular_mail_2": ${delivery_parties[1].mail_delivery if delivery_parties[1].knows_delivery_method else False}
-    - "post_office_address_2": ${delivery_parties[1].delivery_mail_city + ", " + delivery_parties[1].delivery_mail_state if delivery_parties[1].knows_delivery_method and delivery_parties[1].regular_mail else ""}
+    - "post_office_address_2": ${delivery_parties[1].delivery_mail_city + ", " + delivery_parties[1].delivery_mail_state if delivery_parties[1].knows_delivery_method and delivery_parties[1].mail_delivery else ""}
     - "third_party_mail_2": ${delivery_parties[1].by_third_party if delivery_parties[1].knows_delivery_method else False}
     - "third_party_address_2": ${delivery_parties[1].third_delivery_mail_city + ", " + delivery_parties[1].third_delivery_mail_state if delivery_parties[1].knows_delivery_method and delivery_parties[1].by_third_party else ""}
     - "efm_2": ${delivery_parties[1].efm_delivery if delivery_parties[1].knows_delivery_method else False}
@@ -1845,7 +1892,7 @@ attachment:
     - "delivery_party_email_3": ${ delivery_parties[2].delivery_email}
     - "hand_delivery_3": ${delivery_parties[2].hand_delivery if delivery_parties[2].knows_delivery_method else False}
     - "regular_mail_3": ${delivery_parties[2].mail_delivery if delivery_parties[2].knows_delivery_method else False}
-    - "post_office_address_3": ${delivery_parties[2].delivery_mail_city + ", " + delivery_parties[2].delivery_mail_state if delivery_parties[2].knows_delivery_method and delivery_parties[2].regular_mail else ""}
+    - "post_office_address_3": ${delivery_parties[2].delivery_mail_city + ", " + delivery_parties[2].delivery_mail_state if delivery_parties[2].knows_delivery_method and delivery_parties[2].mail_delivery else ""}
     - "third_party_mail_3": ${delivery_parties[2].by_third_party if delivery_parties[2].knows_delivery_method else False}
     - "third_party_address_3": ${delivery_parties[2].third_delivery_mail_city + ", " + delivery_parties[2].third_delivery_mail_state if delivery_parties[2].knows_delivery_method and delivery_parties[2].by_third_party else ""}
     - "efm_3": ${delivery_parties[2].efm_delivery if delivery_parties[2].knows_delivery_method else False}
@@ -2014,16 +2061,18 @@ attachment:
     - "signing_defendant_name_1": ${signing_users[0].name.full(middle='full')}
     - "signing_defendant_street_1": ${signing_users[0].address.line_one(bare=True)}
     - "signing_defendant_csz_1": ${signing_users[0].address.line_two()}
-    - "signing_defendant_phone_1": ${phone_number_formatted(signing_users[0].phone_number) if signing_users.phone_number != "" else ""}}
+    - "signing_defendant_phone_1": ${phone_number_formatted(signing_users[0].phone_number)}
     - "signing_defendant_name_2": ${signing_users[1].name.full(middle='full')}
     - "signing_defendant_street_2": ${signing_users[1].address.line_one(bare=True)}
     - "signing_defendant_csz_2": ${signing_users[1].address.line_two()}
-    - "signing_defendant_phone_2": ${phone_number_formatted(signing_users[1].phone) if signing_users.phone_number != "" else ""}}
+    - "signing_defendant_phone_2": ${phone_number_formatted(signing_users[1].phone_number)}
     - "signing_defendant_name_3": ${signing_users[2].name.full(middle='full')}
     - "signing_defendant_street_3": ${signing_users[2].address.line_one(bare=True)}
     - "signing_defendant_csz_3": ${signing_users[2].address.line_two()}
-    - "signing_defendant_phone_3": ${phone_number_formatted(signing_users[2].phone) if signing_users.phone_number != "" else ""}}
+    - "signing_defendant_phone_3": ${phone_number_formatted(signing_users[2].phone_number)}
     - "additional_signatures": ${True if signing_users.number_gathered() > 3 else False}
+    - "defendant_signature_1": ${"/s/ " + signing_users[1].name.full(middle='full') if signing_users[1].party_signs else ""}
+    - "defendant_signature_2": ${"/s/ " + signing_users[2].name.full(middle='full') if signing_users[2].party_signs else ""}
 ---
 attachment:
   variable name: additional_answers[i]
@@ -2272,14 +2321,20 @@ review:
       ${ x.name.full(middle="full")  }
   - Edit: x.address.address
     button: |
+      % if x == users[0]:
       **Your address:**
+      % else:
+      **${ x.name.full(middle="full")  }'s address:**
+      % endif
       ${x.address.on_one_line(bare=True)}
-    show if: x == users[0]
   - Edit: x.phone_number
     button: |
+      % if x == users[0]:
       **Your phone number:**
+      % else:
+      **${ x.name.full(middle="full")  }'s phone number:**
+      % endif
       ${ phone_number_formatted(x.phone_number) }
-    show if: x == users[0]
   - Edit: x.has_email_address
     button: |
       **Do you have an email address?**
@@ -2355,7 +2410,7 @@ review:
       **Email address for delivery**:
       ${x.delivery_email}
     show if: x.knows_delivery_method and (x.efm_delivery or x.email_delivery) and not x.fully_agree
-  - Edit: x.regular_mail.address
+  - Edit: x.delivery_mail_city
     button: |
       *City and state of mailbox or post office:**
       ${x.delivery_mail_city}, ${x.delivery_mail_state}
@@ -2451,7 +2506,7 @@ review:
       **Email address for delivery**:
       ${x.delivery_email}
     show if: x.knows_delivery_method and (x.efm_delivery or x.email_delivery)
-  - Edit: x.regular_mail.address
+  - Edit: x.delivery_mail_city
     button: |
       *City and state of mailbox or post office:**
       ${x.delivery_mail_city}, ${x.delivery_mail_state}
@@ -2487,17 +2542,32 @@ section: Responses
 question: |
   Responses
 subquestion: |
-  ${ answer_responses.table }
-  % if answer_responses.number_gathered() < 45:
-  
-  ${ answer_responses.add_action() }
-  % endif
+  Edit your answers below.
 review:
-  - Edit: users[0].name.first
+  - Edit: working_with_lender
     button: |
-      **Your Name:**
-      ${users[0].name.full(middle='full')}
-    show if: users[0].name.middle == "This button should not appear. I have only included this Edit so that this review section could just go directly to the answer_responses table. Hopefully no one's legal middle name is these three sentences."
+      **Are you working with a lender on getting a loan modification?**
+      ${word(yesno(working_with_lender))}
+  - Edit: approved_modification
+    button: |
+      **Do you already have an approved loan modification?**
+      ${word(yesno(approved_modification))}
+  - Edit: housing_counselor
+    button: |
+      **Are you working with a housing counselor?**
+      ${word(yesno(housing_counselor))}
+  - Edit: counselor.name.first
+    button: |
+      **Housing counselor's name:**
+      ${counselor.name.full(middle='full')}, working for ${counselor.agency}
+    show if: housing_counselor
+  - Edit: answer_responses.revisit
+    button: |
+      **Your responses: (Edit to change paragaph, subparagraph, and response)**
+
+      % for paragraph in answer_responses:
+        * ${ paragraph.para + paragraph.sub + " (" + paragraph.response + ")"}
+      % endfor
 ---
 id: answers review screen
 continue button field: answer_responses.revisit
@@ -2750,15 +2820,10 @@ review:
     button: |
       **Are you working with a housing counselor?**
       ${word(yesno(housing_counselor))}
-  - Edit: counselor.agency
-    button: |
-      **What company or agency does the housing counselor work for?**
-      ${counselor.agency}
-    show if: housing_counselor
   - Edit: counselor.name.first
     button: |
-      **What is the housing counselor's name?**
-      ${counselor.name.full(middle='full')}
+      **Housing counselor's name:**
+      ${counselor.name.full(middle='full')}, working for ${counselor.agency}
     show if: housing_counselor
   - Edit: answer_responses.revisit
     button: |
