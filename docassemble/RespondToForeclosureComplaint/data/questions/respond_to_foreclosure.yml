@@ -40,7 +40,7 @@ code: |
   allowed_courts = ['Circuit']
   user_ask_role = 'defendant'
   al_form_type = 'existing_case'
-  form_name = "Mortgage Foreclosure Appearance and Answer"
+  form_name = "Mortgage Foreclosure Appearance & Answer"
 ---
 # Road map
 sections:
@@ -216,9 +216,9 @@ id: welcome
 question: |
   Respond to a mortgage foreclosure complaint
 subquestion: |
-  Welcome to Illinois Legal Aid Online's **Respond to a foreclosure** Easy Form.
+  Welcome to Illinois Legal Aid Online's **Respond to a mortgage foreclosure complaint** Easy Form.
 
-  If you received a Mortgage Foreclosure Complaint, you have been sued. Your Summons either lists a court date or a deadline for filing Appearance and Answer forms. This program helps you respond to a foreclosure lawsuit when the Summons lists a deadline for filing forms. It makes different forms depending on how you want to respond.
+  If you received a Mortgage Foreclosure Complaint, you have been sued. Your Summons either lists a court date or a deadline for filing Appearance & Answer forms. This program helps you respond to a foreclosure lawsuit when the Summons lists a deadline for filing forms. It makes different forms depending on how you want to respond.
   
   A *Mortgage Foreclosure Appearance & Answer* tells the court and the other parties that you are participating in the court case and how you respond to what is written in the Complaint.
   
@@ -275,7 +275,7 @@ question: |
 subquestion: |
   The *Mortgage Foreclosure Appearance & Answer* tells the court you know about the foreclosure case and whether you agree or disagree with what was said in the Mortgage Foreclosure Complaint. It also allows you to tell the court what defenses you have.
   
-  You must file within 30 days after you got the Mortgage Foreclosure Complaint. If you do not respond by then, you can ask the court for an extension of time using ILAO's [**Motion to continue or extend time Easy Form**](https://www.illinoislegalaid.org/legal-information/motion-continue-or-extend-time).
+  You must file within 30 days after you got the Mortgage Foreclosure Complaint. If you do not respond by then, you can ask the court for an extension of time using ILAO's [**Motion Easy Form**](https://www.illinoislegalaid.org/legal-information/motion-continue-or-extend-time).
   
   To learn more, read ILAO's article about [**responding to a mortgage foreclosure case**](https://www.illinoislegalaid.org/legal-information/responding-mortgage-foreclosure-case). 
   
@@ -351,7 +351,7 @@ terms:
 ---
 id: other parties there is another
 question: |
-  Are there any other plaintiffs in this matter?
+  Are there any other plaintiffs in this case?
 subquestion: |
   % if len(other_parties.elements) >= 1:  
   So far you have told us about ${comma_and_list(other_parties.complete_elements().full_names())}.
@@ -398,7 +398,7 @@ question: |
   % if i == 0:
   What is your name?
   % else:
-  What is the name of the ${ ordinal(i) } person who is part of the foreclosure case with you?
+  What is the name of the ${ ordinal(i) } defendant?
   % endif
 subquestion: |
   % if i != 0:
@@ -419,9 +419,9 @@ fields:
 ---
 template: long_name_help
 subject: |
-  **What if the person's name doesn't fit into 4 fields?**
+  **What if I need more space?**
 content: |
-  If the party has a long name like "Jane Smith, Director of Housing," select **Business or organization**. You can then enter the full name and title.
+  If the person has a long name like "Jane Smith, Director of Housing," select **Business or organization**. You can then enter the full name and title.
 ---
 sets:
   - other_parties[i].name.first
@@ -544,17 +544,26 @@ fields:
 ---
 id: counselor company counselor name
 question: |
-  Who is the housing counselor you are working with?
+  Housing counselor information
+subquestion: |
+  Enter the name of the housing counselor and their organization, if known.
 fields:
+  - note: |
+      #### Company or agency
+  - Company or agency: counselor.agency
+    required: False      
+  - note: |
+      #### Housing counselor
   - First: counselor.name.first
+    required: False
   - Middle: counselor.name.middle
     required: False
   - Last: counselor.name.last
+    required: False
   - Suffix: counselor.name.suffix
     code: |
       name_suffix()
     required: False
-  - Company or agency name: counselor.agency
 ---
 #id: counselor name
 #question: |
@@ -822,7 +831,7 @@ continue button field: defense_legal_help
 question: |
   Foreclosure defenses and legal help
 subquestion: |
-  Since you may have one or more of the defenses listed on the previous screens, you may want to contact an attorney to help you with your case.
+  **Note:** Since you may have one or more of the defenses listed on the previous screens, you may want to contact an attorney to help you with your case.
   
   If you would like help finding free or low-cost legal services in your area, use [**Get Legal Help**](https://www.illinoislegalaid.org/get-legal-help).
   
@@ -973,7 +982,7 @@ continue button field: delivery_intro
 question: |
   Send your forms to all other parties
 subquestion: |
-  These are the other parties in this case: ${comma_and_list(delivery_parties)}.
+  You will need to deliver a copy of your forms to these other parties: ${comma_and_list(delivery_parties)}.
 
   You must send a copy of your forms to each of them.
 
@@ -1570,7 +1579,7 @@ objects:
   - al_court_bundle: ALDocumentBundle.using(elements=[appearance_answer, answer_bundle], filename="respond_to_foreclosure_complaint.pdf", title="Foreclosure Complaint Appearance & Answer")
 ---
 objects:
-  - answer_bundle: ALDocumentBundle.using(elements=[appearance_answer, additional_answers, additional_defenses, additional_signatures_bundle, additional_proof_bundle], filename="respond_to_foreclosure_complaint.pdf", title="Mortgage Foreclosure Appearance and Answer")
+  - answer_bundle: ALDocumentBundle.using(elements=[appearance_answer, additional_answers, additional_defenses, additional_signatures_bundle, additional_proof_bundle], filename="respond_to_foreclosure_complaint.pdf", title="Mortgage Foreclosure Appearance & Answer")
 ---
 reconsider: True
 code: |
@@ -1972,7 +1981,9 @@ attachment:
     - "physical_method_4": ${True if x.mail_delivery or x.by_third_party or x.hand_delivery or x.jail_delivery else False}
     - "regular_or_third_mail_4": ${True if x.mail_delivery or x.by_third_party else False}
     - "mailbox_third_party_city_4": |
-        % if x.mail_delivery:
+        % if x.mail_delivery and x.by_third_party:
+        Mail: ${x.delivery_mail_city}
+        % elif x.mail_delivery:
         ${x.delivery_mail_city}
         % elif x.by_third_party:
         ${x.third_delivery_mail_city}
@@ -1980,10 +1991,18 @@ attachment:
         ${""}
         % endif
     - "mailbox_third_party_state_4": |
-        % if x.mail_delivery:
+        % if x.mail_delivery and x.by_third_party:
+        ${x.delivery_mail_state}
+        % elif x.mail_delivery:
         ${x.delivery_mail_state}
         % elif x.by_third_party:
         ${x.third_delivery_mail_state}
+        % else:
+        ${""}
+        % endif
+    - "carrier_location_4": |
+        % if x.mail_delivery and x.by_third_party:
+        Carrier: ${x.third_delivery_mail_city}, ${x.third_delivery_mail_state}
         % else:
         ${""}
         % endif
@@ -2014,7 +2033,9 @@ attachment:
     - "physical_method_5": ${True if x.second_person.mail_delivery or x.second_person.by_third_party or x.second_person.hand_delivery or x.second_person.jail_delivery else False}
     - "regular_or_third_mail_5": ${True if x.second_person.mail_delivery or x.second_person.by_third_party else False}
     - "mailbox_third_party_city_5": |
-        % if x.second_person.mail_delivery:
+        % if x.second_person.mail_delivery and x.second_person.by_third_party:
+        Mail: ${x.second_person.delivery_mail_city}
+        % elif x.second_person.mail_delivery:
         ${x.second_person.delivery_mail_city}
         % elif x.second_person.by_third_party:
         ${x.second_person.third_delivery_mail_city}
@@ -2022,10 +2043,18 @@ attachment:
         ${""}
         % endif
     - "mailbox_third_party_state_5": |
-        % if x.second_person.mail_delivery:
+        % if x.second_person.mail_delivery and x.second_person.by_third_party:
+        ${x.second_person.delivery_mail_state}
+        % elif x.second_person.mail_delivery:
         ${x.second_person.delivery_mail_state}
         % elif x.second_person.by_third_party:
         ${x.second_person.third_delivery_mail_state}
+        % else:
+        ${""}
+        % endif
+    - "carrier_location_5": |
+        % if x.second_person.mail_delivery and x.second_person.by_third_party:
+        Carrier: ${x.second_person.third_delivery_mail_city}, ${x.second_person.third_delivery_mail_state}
         % else:
         ${""}
         % endif
@@ -2253,15 +2282,12 @@ review:
     button: |
       **Are you working with a housing counselor?**
       ${word(yesno(housing_counselor))}
-  - Edit: counselor.agency
-    button: |
-      **What company or agency does the housing counselor work for?**
-      ${counselor.agency}
-    show if: housing_counselor
   - Edit: counselor.name.first
     button: |
-      **What is the housing counselor's name?**
-      ${counselor.name.full(middle='full')}
+      **Housing counselor information:**
+      
+      * Orgnization: ${counselor.agency}
+      * Counselor: ${counselor.name.full(middle='full')}
     show if: housing_counselor
 ---
 id: users review screen
@@ -2822,8 +2848,10 @@ review:
       ${word(yesno(housing_counselor))}
   - Edit: counselor.name.first
     button: |
-      **Housing counselor's name:**
-      ${counselor.name.full(middle='full')}, working for ${counselor.agency}
+      **Housing counselor information:**
+      
+      * Orgnization: ${counselor.agency}
+      * Counselor: ${counselor.name.full(middle='full')}
     show if: housing_counselor
   - Edit: answer_responses.revisit
     button: |
