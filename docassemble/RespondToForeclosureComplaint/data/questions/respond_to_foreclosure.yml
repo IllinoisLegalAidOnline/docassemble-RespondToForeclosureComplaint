@@ -123,6 +123,8 @@ code: |
   nav.set_section('section_delivery')
   delivery_intro
   for person in delivery_parties:
+    #The fully_agree variable is only used for a delivery_parties object in the review screen shared by users and delivery_parties. 
+    person.fully_agree = False
     if person.is_represented == True:
       person.lawyer.name.first
     person.address.address
@@ -275,7 +277,9 @@ question: |
 subquestion: |
   The *Mortgage Foreclosure Appearance & Answer* tells the court you know about the foreclosure case and whether you agree or disagree with what was said in the Mortgage Foreclosure Complaint. It also allows you to tell the court what defenses you have.
   
-  You must file within 30 days after you got the Mortgage Foreclosure Complaint. If you do not respond by then, you can ask the court for an extension of time using ILAO's [**Motion Easy Form**](https://www.illinoislegalaid.org/legal-information/motion-continue-or-extend-time).
+  You must file within 30 days after you got the Mortgage Foreclosure Complaint. If you do not respond by then, you can ask the court for an extension of time using ILAO's [**Motion to continue or extend time Easy Form**](https://www.illinoislegalaid.org/legal-information/motion-continue-or-extend-time).
+
+  **Note:** If it has already been 30 days and a Default Judgment of Foreclosure was entered against you, you can ask the court to undo the judgment so you can participate in the case. Use ILAO's [**Vacate a default judgment of foreclosure**](https://www.illinoislegalaid.org/legal-information/vacate-default-judgment-foreclosure) program to make the forms you need.
   
   To learn more, read ILAO's article about [**responding to a mortgage foreclosure case**](https://www.illinoislegalaid.org/legal-information/responding-mortgage-foreclosure-case). 
   
@@ -340,7 +344,7 @@ question: |
 subquestion: |
   You must respond to a Mortgage Foreclosure Complaint within 30 days after you were **{properly served}**.
 
-  If you missed this deadline then a default judgment may have been entered against you. You can ask the court to remove the judgment by filing a [**Motion to Vacate Default Judgment of Foreclosure**](https://www.illinoislegalaid.org/legal-information/vacate-default-judgment-foreclosure).
+  If you missed this deadline then a default judgment may have been entered against you. You can ask the court to remove the judgment by filing a *Motion to Vacate Default Judgment of Foreclosure.* Use [**ILAO's Easy Form**](https://www.illinoislegalaid.org/legal-information/vacate-default-judgment-foreclosure) to make the forms you need.
 buttons:
   - Exit: exit
   - Restart: restart
@@ -548,22 +552,10 @@ question: |
 subquestion: |
   Enter the name of the housing counselor and their organization, if known.
 fields:
-  - note: |
-      #### Company or agency
-  - Company or agency: counselor.agency
-    required: False      
-  - note: |
-      #### Housing counselor
-  - First: counselor.name.first
+  - Housing counselor name: counselor.name.first
     required: False
-  - Middle: counselor.name.middle
-    required: False
-  - Last: counselor.name.last
-    required: False
-  - Suffix: counselor.name.suffix
-    code: |
-      name_suffix()
-    required: False
+  - Company or agency they work for: counselor.agency
+    required: False    
 ---
 #id: counselor name
 #question: |
@@ -888,7 +880,7 @@ subquestion: |
 ---
 id: add defenses page
 question: |
-  Do you want to add an additional page to describe your defenses?
+  Do you want to add another page to describe additional defenses?
 fields:
   - no label: add_defenses_page
     datatype: yesnoradio
@@ -1512,7 +1504,7 @@ terms:
 generic object: ALIndividual
 id: codefendant e-signature
 question: |
-  Does ${x.name.full(middle='full')} want to add their e-signature to their name change forms?
+  Does ${x.name.full(middle='full')} want to add their e-signature to the forms?
 subquestion: |
   This program can put “**/s/ ${x.name.full(middle='full')}**” where they would sign their name. The court will accept this as their signature.
 
@@ -1520,7 +1512,7 @@ subquestion: |
   
   <div class="alert alert-info ilao-info" role="alert">
     <h6 class="alert-heading">What it means to sign the forms</h6>
-    <p>By signing the <i>Request for Name Change</i>, ${x.name.full(middle='full')} is certifying that:</p>
+    <p>By signing the court forms, ${x.name.full(middle='full')} is certifying that:</p>
     <p><ul>
       <li>Everything on the forms is true and correct, and</li>
       <li>They understand that making a false statement on the form is perjury, which can result in criminal penalties.</li>
@@ -1528,7 +1520,7 @@ subquestion: |
     <p>See the <a href="https://www.ilga.gov/legislation/ilcs/documents/073500050k1-109.htm"><b>Code of Civil Procedure, 735 ILCS 5/1-109</b></a> for more information.</p>
   </div>
 fields:
-  - "Add ${x.name.full(middle='full')}'s' e-signature?": x.party_signs
+  - "Add ${x.name.full(middle='full')}'s e-signature?": x.party_signs
     datatype: yesnoradio
 terms:
   - "e-signature": |
@@ -2270,25 +2262,6 @@ review:
     button: |
       **Foreclosed property's address:**
       ${foreclosure_property.on_one_line(bare=True)}
-  - Edit: working_with_lender
-    button: |
-      **Are you working with a lender on getting a loan modification?**
-      ${word(yesno(working_with_lender))}
-  - Edit: approved_modification
-    button: |
-      **Do you already have an approved loan modification?**
-      ${word(yesno(approved_modification))}
-  - Edit: housing_counselor
-    button: |
-      **Are you working with a housing counselor?**
-      ${word(yesno(housing_counselor))}
-  - Edit: counselor.name.first
-    button: |
-      **Housing counselor information:**
-      
-      * Orgnization: ${counselor.agency}
-      * Counselor: ${counselor.name.full(middle='full')}
-    show if: housing_counselor
 ---
 id: users review screen
 continue button field: users.revisit
@@ -2438,7 +2411,7 @@ review:
     show if: x.knows_delivery_method and (x.efm_delivery or x.email_delivery) and not x.fully_agree
   - Edit: x.delivery_mail_city
     button: |
-      *City and state of mailbox or post office:**
+      **City and state of mailbox or post office:**
       ${x.delivery_mail_city}, ${x.delivery_mail_state}
     show if: x.knows_delivery_method and x.mail_delivery and not x.fully_agree
   - Edit: x.third_delivery_mail_city
@@ -2534,7 +2507,7 @@ review:
     show if: x.knows_delivery_method and (x.efm_delivery or x.email_delivery)
   - Edit: x.delivery_mail_city
     button: |
-      *City and state of mailbox or post office:**
+      **City and state of mailbox or post office:**
       ${x.delivery_mail_city}, ${x.delivery_mail_state}
     show if: x.knows_delivery_method and x.mail_delivery and not x.fully_agree
   - Edit: x.third_delivery_mail_city
@@ -2584,8 +2557,18 @@ review:
       ${word(yesno(housing_counselor))}
   - Edit: counselor.name.first
     button: |
-      **Housing counselor's name:**
-      ${counselor.name.full(middle='full')}, working for ${counselor.agency}
+      **Housing counselor information:**
+
+      % if counselor.agency == "":
+      * Organization: None entered
+      % else:
+      * Organization: ${counselor.agency}
+      % endif
+      % if counselor.name.first == "":
+      * Counselor: None entered
+      % else:
+      * Counselor: ${counselor.name.full(middle='full')}
+      % endif
     show if: housing_counselor
   - Edit: answer_responses.revisit
     button: |
@@ -2849,9 +2832,17 @@ review:
   - Edit: counselor.name.first
     button: |
       **Housing counselor information:**
-      
-      * Orgnization: ${counselor.agency}
+
+      % if counselor.agency == "":
+      * Organization: None entered
+      % else:
+      * Organization: ${counselor.agency}
+      % endif
+      % if counselor.name.first == "":
+      * Counselor: None entered
+      % else:
       * Counselor: ${counselor.name.full(middle='full')}
+      % endif
     show if: housing_counselor
   - Edit: answer_responses.revisit
     button: |
