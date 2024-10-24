@@ -833,7 +833,7 @@ subquestion: |
 ---
 id: any defenses
 question: |
-  Do you have any defenses?
+  Do you have any other defenses?
 subquestion: |  
   You can enter details about your defenses on the next screen. 
 fields:
@@ -887,7 +887,7 @@ fields:
 ---
 id: additional defenses description
 question: |
-  Describe any additional defenses you have in your own words. 
+  Describe additional defenses
 subquestion: |  
   You may need to provide facts that support your defenses.
   
@@ -899,7 +899,7 @@ fields:
     label above field: True
     field: additional_defenses_description
     input type: area
-    rows: 18
+    rows: 20
     maxlength: 2400
   - note: After you click **Next**, the program will take a moment to make a preview of the page.
 ---
