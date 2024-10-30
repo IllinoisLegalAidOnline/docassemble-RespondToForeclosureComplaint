@@ -69,7 +69,7 @@ code: |
   if not complaint_received:
     received_kickout
   if more_than_thirty_days:
-    thirty_days_kickout
+    thirty_days_note
   
   nav.set_section('section_case_info')
   users.gather()
@@ -337,17 +337,16 @@ fields:
   - no label: more_than_thirty_days
     datatype: yesnoradio
 ---
-id: more than thirty days kickout
-event: thirty_days_kickout
+id: more than thirty days note
+continue button field: thirty_days_note
 question: |
-  Sorry
+  About late responses
 subquestion: |
-  You must respond to a Mortgage Foreclosure Complaint within 30 days after you were **{properly served}**.
+  The deadline to respond to a Mortgage Foreclosure Complaint is 30 days after you were **{properly served}**. You can still file a *Mortgage Foreclosure Appearance & Answer*, but the judge might not excuse the delay.
 
-  If you missed this deadline then a default judgment may have been entered against you. You can ask the court to remove the judgment by filing a *Motion to Vacate Default Judgment of Foreclosure.* Use [**ILAO's Easy Form**](https://www.illinoislegalaid.org/legal-information/vacate-default-judgment-foreclosure) to make the forms you need.
-buttons:
-  - Exit: exit
-  - Restart: restart
+  If you missed this deadline a default judgment may have been entered against you. You may want to contact the court clerk to find out if this has happened. If so, you can ask the court to remove the judgment by filing a *Motion to Vacate Default Judgment of Foreclosure.* Use [**ILAO's Easy Form**](https://www.illinoislegalaid.org/legal-information/vacate-default-judgment-foreclosure) to make the forms you need.
+
+  This program will still help you make a *Mortgage Foreclosure Appearance & Answer*, but you may want to contact an attorney to help you with your case. If you would like help finding free or low-cost legal services in your area, use [**Get Legal Help**](https://www.illinoislegalaid.org/get-legal-help).
 ---
 terms:
   - "properly served": |
