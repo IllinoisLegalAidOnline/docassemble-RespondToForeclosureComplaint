@@ -65,10 +65,14 @@ code: |
   lawsuit_information
   #challenge_service
   #more_lawsuit_information
-  
-  if not complaint_received:
+
+  if complaint_received is None:
+    complaint_note
+  elif not complaint_received:
     received_kickout
   if more_than_thirty_days:
+    if default_judgment:
+      default_kickout
     thirty_days_note
   
   nav.set_section('section_case_info')
@@ -314,9 +318,22 @@ subquestion: |
 id: complaint received check
 question: |
   Did you receive a Mortgage Foreclosure Complaint and Summons to appear in court?
+subquestion: |
+  If your lender published a notice in a newspaper that they are foreclosing on your property, click **Yes**.
 fields:
   - no label: complaint_received
-    datatype: yesnoradio
+    datatype: yesnomaybe
+---
+id: complaint note
+continue button field: complaint_note
+question: |
+  About complaints and summons
+subquestion: |
+  You can still use this program if you are not certain if you have been served, but you may not have all the information you need to complete your forms.
+
+  You may want to contact the court clerk to find out if a complaint has been filed against you.
+
+  You may want to contact a lawyer to help you with your case. If you would like help finding free or low-cost legal services in your area, use [**Get Legal Help**](https://www.illinoislegalaid.org/get-legal-help).
 ---
 id: no complaint received kickout
 event: received_kickout
@@ -337,6 +354,29 @@ fields:
   - no label: more_than_thirty_days
     datatype: yesnoradio
 ---
+id: default judgment
+question: |
+    Has a default judgment been entered against you?
+subquestion: |
+    You may want to contact the court clerk to find out if this has happened.
+fields:
+  - no label: default_judgment
+    datatype: yesnomaybe
+---
+id: default kickout
+event: default_kickout
+question: |
+  Sorry
+subquestion: |
+  You cannout use this program if a default judgment has been entered against you.
+  
+  You may ask the court to remove the default judgment by filing a *Motion to Vacate Default Judgment of Foreclosure.* Use [**ILAO's Easy Form**](https://www.illinoislegalaid.org/legal-information/vacate-default-judgment-foreclosure) to make the forms you need. 
+
+  If a default judgment has been entered against you, you may want to contact a lawyer to help you with your case. If you would like help finding free or low-cost legal services in your area, use [**Get Legal Help**](https://www.illinoislegalaid.org/get-legal-help).
+buttons:
+  - Exit: exit
+  - Restart: restart    
+---
 id: more than thirty days note
 continue button field: thirty_days_note
 question: |
@@ -344,9 +384,9 @@ question: |
 subquestion: |
   The deadline to respond to a Mortgage Foreclosure Complaint is 30 days after you were **{properly served}**. You can still file a *Mortgage Foreclosure Appearance & Answer*, but the judge might not excuse the delay.
 
-  If you missed this deadline a default judgment may have been entered against you. You may want to contact the court clerk to find out if this has happened. If so, you can ask the court to remove the judgment by filing a *Motion to Vacate Default Judgment of Foreclosure.* Use [**ILAO's Easy Form**](https://www.illinoislegalaid.org/legal-information/vacate-default-judgment-foreclosure) to make the forms you need.
+  If you missed this deadline a default judgment may have been entered against you. If so, you can ask the court to remove the judgment by filing a *Motion to Vacate Default Judgment of Foreclosure.* Use [**ILAO's Easy Form**](https://www.illinoislegalaid.org/legal-information/vacate-default-judgment-foreclosure) to make the forms you need.
 
-  This program will still help you make a *Mortgage Foreclosure Appearance & Answer*, but you may want to contact an attorney to help you with your case. If you would like help finding free or low-cost legal services in your area, use [**Get Legal Help**](https://www.illinoislegalaid.org/get-legal-help).
+  If a default judgment has been entered against you, you may want to contact a lawyer to help you with your case. If you would like help finding free or low-cost legal services in your area, use [**Get Legal Help**](https://www.illinoislegalaid.org/get-legal-help).
 ---
 terms:
   - "properly served": |
@@ -598,7 +638,7 @@ continue button field: illinois_law_note
 question: |
   Illinois law and Mortgage Forclosure Complaints
 subquestion: |
-  When you use file a *Mortgage Foreclosure Appearance & Answer* you may be admitting that certain facts are true, like that you were given the required notices about the default on the mortgage. 
+  When you file a *Mortgage Foreclosure Appearance & Answer* you may be admitting that certain facts are true, like that you were given the required notices about the default on the mortgage. 
   
   This is because some facts do not need to be listed in an approved foreclosure complaint form.
 ---
@@ -822,7 +862,7 @@ continue button field: defense_legal_help
 question: |
   Foreclosure defenses and legal help
 subquestion: |
-  **Note:** Since you may have one or more of the defenses listed on the previous screens, you may want to contact an attorney to help you with your case.
+  **Note:** Since you may have one or more of the defenses listed on the previous screens, you may want to contact a lawyer to help you with your case.
   
   If you would like help finding free or low-cost legal services in your area, use [**Get Legal Help**](https://www.illinoislegalaid.org/get-legal-help).
   
@@ -1508,6 +1548,8 @@ subquestion: |
   This program can put “**/s/ ${x.name.full(middle='full')}**” where they would sign their name. The court will accept this as their signature.
 
   If they do not add their **{e-signature}** now, they must sign the paper forms before you file them.
+
+  **Note:** Only click **Yes** if you are sure ${x.name.full(middle='full')} agrees with your responses. Be careful. If you sign as them and they do not agree with your responses, this could affect your case or cause other legal problems.
   
   <div class="alert alert-info ilao-info" role="alert">
     <h6 class="alert-heading">What it means to sign the forms</h6>
