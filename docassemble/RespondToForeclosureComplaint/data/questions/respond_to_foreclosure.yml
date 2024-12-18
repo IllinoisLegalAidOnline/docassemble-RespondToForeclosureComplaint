@@ -81,6 +81,7 @@ code: |
   trial_court
   case_number
   foreclosure_property.address
+  set_progress(20)
   
     
   nav.set_section('section_answer')
@@ -103,6 +104,7 @@ code: |
   
   nav.set_section('section_defenses')
   defenses_intro 
+  set_progress(40)
   #The following three questions are only asked to check whether to run the defense_legal_help continue button field page. This is holdover behavior from the LHI version of this program. I have also added a code block that creates a default answer for defenses_description including any assorted_defenses checkboxes marked as True.
   if assorted_defenses.any_true():
     defense_legal_help
@@ -113,6 +115,7 @@ code: |
     if add_defenses_page:
       additional_defenses_description
       preview_additional_defenses
+  set_progress(60)
   if users.number_gathered() > 1:
     agreement_intro
     for index, party in enumerate(users):
@@ -136,7 +139,8 @@ code: |
       person.mail_delivery
       person.delivery_date
   hand_delivery_info   
-  
+
+  set_progress(80)
   nav.set_section('section_about_you')
   users[0].address.address
   users[0].has_email_address
@@ -150,9 +154,9 @@ code: |
   make_signer_list
   refresh_signatures_bundle
   refresh_delivery_bundle
-  for index, party in enumerate(signing_users):
-    if index > 0:
-      party.party_signs
+  #for index, party in enumerate(signing_users):
+  #  if index > 0:
+  #    party.party_signs
   nav.set_section('section_download')
   forms_assembling
   snapshot_forms
