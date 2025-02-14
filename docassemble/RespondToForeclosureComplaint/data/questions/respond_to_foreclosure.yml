@@ -372,7 +372,7 @@ event: default_kickout
 question: |
   Sorry
 subquestion: |
-  You cannout use this program if a default judgment has been entered against you.
+  You cannot use this program if a default judgment has been entered against you.
   
   You may ask the court to remove the default judgment by filing a *Motion to Vacate Default Judgment of Foreclosure.* Use [**ILAO's Easy Form**](https://www.illinoislegalaid.org/legal-information/vacate-default-judgment-foreclosure) to make the forms you need. 
 
@@ -537,7 +537,7 @@ question: |
 subquestion: |
     If the other defendants agree with your responses and defenses, they can join your *Mortgage Foreclosure Appearance & Answer*. This program can add their information to your forms.
 
-    Any defendents who join you will need to sign the forms before you file them.
+    Any defendants who join you will need to sign the forms before you file them.
 ---
 id: users fully agree
 question: |
@@ -628,7 +628,7 @@ subquestion: |
   * **{Deny}**, or
   * **{Do not know}**.
   
-  The forms made by this program allow you to respond to up to 45 labeled paragraphs and subparagraphs. If you need to respond to more, download a blank [**Additional Paragraphs for Answer or Response**](https://www.illinoiscourts.gov/documents-and-forms/approved-forms/circuit-forms/answer-response). 
+  The forms made by this program allow you to respond to up to 45 labeled paragraphs and subparagraphs. If you need to respond to more, download a blank [**Additional Paragraphs for Answer or Response**](https://www.illinoiscourts.gov/Resources/830c056f-349d-4798-a488-53592f01402c/MortgFore_Appearance_Answer_Addtl_Pars_Approved.pdf). 
 terms:
   Admit: |
     You agree that **all** of the statements in the paragraph are true.
@@ -673,6 +673,11 @@ fields:
       - Do not know: Do not know
         help: |
           You do not know if all of the statements in the paragraph are true or false. This means you do not have enough information to truthfully admit or deny the statements.
+validation code: |
+  if defined("answer_responses[i].sub"):
+    answer_responses[i].full_para = answer_responses[i].para + " " + answer_responses[i].sub
+  else: 
+    answer_responses[i].full_para = answer_responses[i].para
 ---
 id: any other paragraphs
 question: |
@@ -835,6 +840,8 @@ depends on:
   - assorted_defenses
 code: |
   default_defenses = ""
+  if defined("defenses_description"):
+   default_defenses += defenses_description
   if assorted_defenses['wrong_deny']:
     default_defenses += "My mortgage company wrongfully denied my application for a loan modification. "
   if assorted_defenses['fail_respond']:
@@ -851,6 +858,9 @@ code: |
     default_defenses += "I have my own insurance, and the lender has added an insurance premium to my account. "
   if assorted_defenses['not_applied']:
     default_defenses += "My lender has not applied all of my payments to my account."
+  if defined("defenses_description"):
+    reconsider('defenses_description')
+  default_code = True
 ---
 depends on:
   - assorted_defenses
@@ -883,8 +893,6 @@ fields:
   Any defenses?: has_defenses
   datatype: yesnoradio
 ---
-
----
 id: defenses description
 question: |
   Describe any defenses you have in your own words. 
@@ -895,7 +903,9 @@ subquestion: |
   % endif
   You may need to provide facts that support your defenses.
   
-  If you need more room to explain, you can add an additional page. You can preview how your answer looks on the form on the next screen.
+  The form has space for about 19 lines of text, or about 850 characters. You can preview how this looks on the form on the next screen.
+  
+  **Note:** If you need more space, you can enter more text on an upcoming screen. Select **Yes** when asked if you want to add an additional page to explain."
 fields:
   - label: Defenses
     field: defenses_description
@@ -920,6 +930,8 @@ subquestion: |
   ${ appearance_answer.as_pdf(key='preview').extract_pages(first=2, last=2) }
   
   If you want to make changes, click **Back** or go to the [**Defenses**](${ url_action('section_defenses') }) section. If you do not want to make changes or if you need more space, click **Next**.
+
+  **Note:** If you need more space, you can enter more text on an upcoming screen. Select **Yes** when asked if you want to add an additional page to explain."
 ---
 id: add defenses page
 question: |
@@ -2639,9 +2651,11 @@ table: answer_responses.table
 rows: answer_responses
 columns:
   - Paragraph: |
-      row_item.para
-  - Subparagraph: |
-      row_item.sub if defined("row_item.sub") else ""
+      row_item.full_para
+  #- Paragraph: |
+  #    row_item.para
+  #- Subparagraph: |
+  #    row_item.sub if defined("row_item.sub") else ""
   - Response: |
       row_item.response
   - Actions: |
@@ -2708,6 +2722,7 @@ review:
       % if assorted_defenses.all_false():
       * None of the specific defenses apply to my case.
       % endif
+    show if: defined("defenses_description") == False
   - Edit: has_defenses
     button: |
       **Do you have any defenses?**
@@ -2927,6 +2942,7 @@ review:
       % if assorted_defenses.all_false():
       * None of the specific defenses apply to my case.
       % endif
+    show if: defined("defenses_description") == False
   - Edit: has_defenses
     button: |
       **Do you have any defenses?**
