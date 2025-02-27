@@ -851,11 +851,11 @@ code: |
   if assorted_defenses['wrong_deny']:
     default_defenses += "My mortgage company wrongfully denied my application for a loan modification. "
     defenses_maxlength -= 80
-    defense_rows -= 1
+    defense_rows -= 2
   if assorted_defenses['fail_respond']:
     default_defenses += "My mortgage company failed to respond to my request for a mortgage modification. "
     defenses_maxlength -= 85
-    defense_rows -= 1
+    defense_rows -= 2
   if assorted_defenses['under_review']:
     default_defenses += "I had a loan modification application under review with my mortgage company when the foreclosure case was filed. "
     defenses_maxlength -= 115
@@ -867,19 +867,19 @@ code: |
   if assorted_defenses['unreasonable_broker']:
     default_defenses += "My broker received an unreasonable lump-sum payment (commission) for brokering the loan. "
     defenses_maxlength -= 90
-    defense_rows -= 1
+    defense_rows -= 2
   if assorted_defenses['contractor']:
     default_defenses += "A contractor started the loan as part of a home repair contract. "
     defenses_maxlength -= 70
-    defense_rows -= 1
+    defense_rows -= 2
   if assorted_defenses['forced_insurance']:
     default_defenses += "I have my own insurance, and the lender has added an insurance premium to my account. "
     defenses_maxlength -= 90
-    defense_rows -= 1
+    defense_rows -= 2
   if assorted_defenses['not_applied']:
     default_defenses += "My lender has not applied all of my payments to my account."
     defenses_maxlength -= 60
-    defense_rows -= 1
+    defense_rows -= 2
   default_code = True
 ---
 depends on:
