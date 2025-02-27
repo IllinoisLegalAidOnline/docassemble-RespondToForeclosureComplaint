@@ -115,7 +115,7 @@ code: |
   set_has_defenses
   if has_defenses:
     default_code
-    defenses_description
+    defense_entry_page
     defenses_first_page
     preview_defenses
     if add_defenses_page:
@@ -842,24 +842,26 @@ fields:
       - "A contractor started the loan as part of a home repair contract.": contractor
       - "I have my own insurance, and the lender has added an insurance premium to my account (force-placed insurance).": forced_insurance
       - "My lender has not applied all of my payments to my account.": not_applied
+validation code: |
+  undefine("defense_entry_page")
 ---
 reconsider: True
 code: |
   default_defenses = ""
-  defenses_maxlength = 1000
-  defense_rows = 19
+  defenses_maxlength = 900
+  defense_rows = 11
   if assorted_defenses['wrong_deny']:
     default_defenses += "My mortgage company wrongfully denied my application for a loan modification. "
     defenses_maxlength -= 80
-    defense_rows -= 2
+    defense_rows -= 1
   if assorted_defenses['fail_respond']:
     default_defenses += "My mortgage company failed to respond to my request for a mortgage modification. "
     defenses_maxlength -= 85
-    defense_rows -= 2
+    defense_rows -= 1
   if assorted_defenses['under_review']:
     default_defenses += "I had a loan modification application under review with my mortgage company when the foreclosure case was filed. "
     defenses_maxlength -= 115
-    defense_rows -= 2
+    defense_rows -= 1
   if assorted_defenses['less_than_3']:
     default_defenses += "My refinance or home equity loan is less than 3 years old and the lender did not accurately tell me information about the loan's Annual Percentage Rate (APR), finance charge(s), amount financed, total of payments or schedule of payments. "
     defenses_maxlength -= 240
@@ -867,19 +869,19 @@ code: |
   if assorted_defenses['unreasonable_broker']:
     default_defenses += "My broker received an unreasonable lump-sum payment (commission) for brokering the loan. "
     defenses_maxlength -= 90
-    defense_rows -= 2
+    defense_rows -= 1
   if assorted_defenses['contractor']:
     default_defenses += "A contractor started the loan as part of a home repair contract. "
     defenses_maxlength -= 70
-    defense_rows -= 2
+    defense_rows -= 1
   if assorted_defenses['forced_insurance']:
     default_defenses += "I have my own insurance, and the lender has added an insurance premium to my account. "
     defenses_maxlength -= 90
-    defense_rows -= 2
+    defense_rows -= 1
   if assorted_defenses['not_applied']:
     default_defenses += "My lender has not applied all of my payments to my account."
     defenses_maxlength -= 60
-    defense_rows -= 2
+    defense_rows -= 1
   default_code = True
 ---
 depends on:
@@ -915,6 +917,7 @@ fields:
   datatype: yesnoradio
 ---
 id: defenses description
+continue button field: defense_entry_page
 question: |
   Describe any defenses you have in your own words. 
 subquestion: |  
@@ -923,15 +926,17 @@ subquestion: |
   % if assorted_defenses.any_true():
   What you enter here will appear after the defenses you chose earlier. If you don't want to add any more defenses, you can leave this blank.
 
-  % endif  
-  The form has space for about ${defense_rows} lines of text, or about ${defenses_maxlength} characters. You can preview how this looks on the form on the next screen.
+  The form has space for about ${defense_rows} additional lines of text, or about ${defenses_maxlength} characters including spaces. You can preview how this looks on the form on the next screen.
+  % else:
+  The form has space for about 11 lines of text, or about 900 characters including spaces. You can preview how this looks on the form on the next screen.
+  % endif
   
   **Note:** If you need more space, you can enter more text on an upcoming screen. Select **Yes** when asked if you want to add an additional page to explain."
 fields:
   - label: Defenses
     field: defenses_description
     input type: area
-    rows: 19
+    rows: 11
     maxlength: ${defenses_maxlength}
     required: not assorted_defenses.any_true()
   - note: After you click **Next**, the program will take a moment to make a preview of the page.
