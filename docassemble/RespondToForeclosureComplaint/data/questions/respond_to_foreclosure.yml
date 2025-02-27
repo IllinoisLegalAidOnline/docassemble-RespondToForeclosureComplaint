@@ -112,11 +112,12 @@ code: |
   #The following three questions are only asked to check whether to run the defense_legal_help continue button field page. This is holdover behavior from the LHI version of this program. I have also added a code block that creates a default answer for defenses_description including any assorted_defenses checkboxes marked as True.
   if assorted_defenses.any_true():
     defense_legal_help
-  set_has_defenses
-  if has_defenses:
-    default_code
-    defense_entry_page
-    defenses_first_page
+  #set_has_defenses
+  #if has_defenses:
+  default_code
+  defense_entry_page
+  defenses_first_page
+  if assorted_defenses.any_true() or defenses_description != "":
     preview_defenses
     if add_defenses_page:
       additional_defenses_description
@@ -884,15 +885,15 @@ code: |
     defense_rows -= 1
   default_code = True
 ---
-depends on:
-  - assorted_defenses
-code: |
-  if assorted_defenses.any_true():
-    has_defenses = True
-    
-  else:
-    has_defenses
-  set_has_defenses = True
+#depends on:
+#  - assorted_defenses
+#code: |
+#  if assorted_defenses.any_true():
+#    has_defenses = True
+#    
+#  else:
+#    has_defenses
+#  set_has_defenses = True
 ---
 id: defense legal help
 continue button field: defense_legal_help
@@ -907,38 +908,40 @@ subquestion: |
 
   To learn more about defenses to a mortgage foreclosure, read ILAO's article on [**Legal reasons to throw out a mortgage foreclosure lawsuit**](https://www.illinoislegalaid.org/legal-information/legal-reasons-throw-out-mortgage-foreclosure-lawsuit).
 ---
-id: any defenses
-question: |
-  Do you have any other defenses?
-subquestion: |  
-  You can enter details about your defenses on the next screen. 
-fields:
-  Any defenses?: has_defenses
-  datatype: yesnoradio
+#id: any defenses
+#question: |
+#  Do you have any other defenses?
+#subquestion: |  
+#  You can enter details about your defenses on the next screen. 
+#fields:
+#  Any defenses?: has_defenses
+#  datatype: yesnoradio
 ---
 id: defenses description
 continue button field: defense_entry_page
 question: |
   Describe any defenses you have in your own words. 
 subquestion: |  
-  You may need to provide facts that support your defenses.
-
   % if assorted_defenses.any_true():
+  You may need to provide facts that support your defenses. 
+  
   What you enter here will appear after the defenses you chose earlier. If you don't want to add any more defenses, you can leave this blank.
 
   The form has space for about ${defense_rows} additional lines of text, or about ${defenses_maxlength} characters including spaces. You can preview how this looks on the form on the next screen.
   % else:
+  You may need to provide facts that support your defenses. If you don't want to add any defenses, you can leave this blank.
+  
   The form has space for about 11 lines of text, or about 900 characters including spaces. You can preview how this looks on the form on the next screen.
   % endif
   
-  **Note:** If you need more space, you can enter more text on an upcoming screen. Select **Yes** when asked if you want to add an additional page to explain."
+  **Note:** If you need more space, you can enter more text on an upcoming screen. Select **Yes** when asked if you want to add an additional page to explain.
 fields:
   - label: Defenses
     field: defenses_description
     input type: area
     rows: 11
     maxlength: ${defenses_maxlength}
-    required: not assorted_defenses.any_true()
+    required: False
   - note: After you click **Next**, the program will take a moment to make a preview of the page.
 ---
 reconsider: True
@@ -947,7 +950,7 @@ code: |
   if assorted_defenses.any_true():
     defenses_first_page += default_defenses
     defenses_first_page += "\n"
-  if has_defenses:
+  if defenses_description != "":
     defenses_first_page += defenses_description
 ---
 id: preview defenses
@@ -1680,7 +1683,7 @@ code: |
   appearance_answer.enabled = True
   additional_defenses.enabled = False
   additional_answers.enabled = False
-  if has_defenses:
+  if assorted_defenses.any_true() or defenses_description != "":
     if add_defenses_page:
       additional_defenses.enabled = True
   if answer_responses.number_gathered() > 22:
@@ -1921,8 +1924,8 @@ attachment:
     - "paragraph_disagree_22": ${ True if answer_responses[21].response == "Deny" and complaint_labeled else False }
     - "paragraph_idk_22": ${ True if answer_responses[21].response == "Do not know" and complaint_labeled else False }
     - "additional_paragraphs": ${True if answer_responses.number_gathered() > 22 and complaint_labeled else ''}
-    - "defenses": ${defenses_first_page if has_defenses else ""}
-    - "additional_defenses": ${True if has_defenses and add_defenses_page else False}
+    - "defenses": ${defenses_first_page}
+    - "additional_defenses": ${True if (assorted_defenses.any_true() or defenses_description != "") and add_defenses_page else False}
     - "preview_watermark": ${ watermark if i =='preview' else '' }
     - "e_signature": ${users[0].name.full(middle='full') if e_signature else ""}
     - "defendant_name_1": ${signing_users[0].name.full(middle='full')}
@@ -2921,26 +2924,25 @@ review:
       % if assorted_defenses.all_false():
       * None of the specific defenses apply to my case.
       % endif
-  - Edit: has_defenses
-    button: |
-      **Do you have any defenses?**
-      ${word(yesno(has_defenses))}
-    show if: assorted_defenses.all_false()
+  #- Edit: has_defenses
+  #  button: |
+  #    **Do you have any defenses?**
+  #    ${word(yesno(has_defenses))}
+  #  show if: assorted_defenses.all_false()
   - Edit: defenses_description
     button: |
       **Your defenses:**
       ${defenses_description}
-    show if: has_defenses
   - Edit: add_defenses_page
     button: |
       **Do you need an additional page to list your defenses?**:
       ${word(yesno(add_defenses_page))}
-    show if: has_defenses
+    show if: assorted_defenses.any_true() or defenses_description != ""
   - Edit: additional_defenses_description
     button: |
       **Your defenses (2nd page):**
       ${additional_defenses_description}
-    show if: has_defenses and add_defenses_page
+    show if: (assorted_defenses.any_true() or defenses_description != "") and add_defenses_page
 ---
 id: delivery info review screen
 event: section_delivery
@@ -3140,26 +3142,25 @@ review:
       % if assorted_defenses.all_false():
       * None of the specific defenses apply to my case.
       % endif
-  - Edit: has_defenses
-    button: |
-      **Do you have any defenses?**
-      ${word(yesno(has_defenses))}
-    show if: assorted_defenses.all_false()
+  #- Edit: has_defenses
+  #  button: |
+  #    **Do you have any defenses?**
+  #    ${word(yesno(has_defenses))}
+  #  show if: assorted_defenses.all_false()
   - Edit: defenses_description
     button: |
       **Your defenses:**
       ${defenses_description}
-    show if: has_defenses
   - Edit: add_defenses_page
     button: |
       **Do you need an additional page to list your defenses?**:
       ${word(yesno(add_defenses_page))}
-    show if: has_defenses
+    show if: assorted_defenses.any_true() or defenses_description != ""
   - Edit: additional_defenses_description
     button: |
       **Your defenses (2nd page):**
       ${additional_defenses_description}
-    show if: has_defenses and add_defenses_page
+    show if: (assorted_defenses.any_true() or defenses_description != "") and add_defenses_page
   - Edit: users[0].name.first
     button: |
       **Your name:**
