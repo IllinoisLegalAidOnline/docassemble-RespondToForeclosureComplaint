@@ -409,7 +409,7 @@ question: |
   Are there any other plaintiffs in this case?
 subquestion: |
   % if len(other_parties.elements) >= 1:  
-  So far you have told us about ${comma_and_list(other_parties.complete_elements().full_names())}.
+  So far you have told us about ${comma_and_list(other_parties)}.
   % endif
 fields:
   - no label: other_parties.there_is_another
@@ -497,7 +497,7 @@ question: |
     Is anyone else on your side of the foreclosure case?
 subquestion: |
   % if len(users.elements) > 1:  
-  So far you have told us about ${comma_and_list(users.complete_elements())}.
+  So far you have told us about ${comma_and_list(users)}.
   % else:
   If there are other defendants besides you, click **Yes**.
   % endif
@@ -1798,11 +1798,11 @@ attachment:
   fields:
     - "filing_county": ${trial_court.address.county.upper()}
     - "plaintiff_names": |
-        ${comma_and_list(other_parties)}
+        ${other_parties.full_names()}
     - "all_defendant_names": |
-        ${comma_and_list(users)}
+        ${users.full_names()}
     - "case_number": ${case_number}
-    - "submitting_defendants": ${comma_and_list(signing_users)}
+    - "submitting_defendants": ${signing_users.full_names()}
     - "property_address_line_1": ${foreclosure_property.line_one(bare=True)}
     - "property_address_line_2": ${foreclosure_property.line_two()}
     - "yes_getting_mod": ${working_with_lender}
@@ -2141,9 +2141,9 @@ attachment:
   fields:
     - "filing_county": ${trial_court.address.county.upper()}
     - "plaintiff_names": |
-        ${comma_and_list(other_parties)}
+        ${other_parties.full_names()}
     - "defendant_names": |
-        ${comma_and_list(users)}
+        ${users.full_names()}
     - "case_number": ${case_number}
     - "codefendant_name_1": ${x.name.full(middle='full')}
     - "codefendant_street_1": ${x.address.line_one(bare=True)}
@@ -2382,9 +2382,9 @@ attachment:
     - "preview_watermark": ${ watermark if i=='preview' else '' }
     - "filing_county": ${trial_court.address.county.upper()}
     - "plaintiff_names": |
-        ${comma_and_list(other_parties)}
+        ${other_parties.full_names()}
     - "all_defendant_names": |
-        ${comma_and_list(users)}
+        ${users.full_names()}
     - "case_number": ${case_number}
     - "additional_defenses_text": ${additional_defenses_description}
     - "user_signature_with_s": ${ "/s " + users[0].name.full(middle='full') if e_signature else ""}
@@ -2414,9 +2414,9 @@ attachment:
   fields:
     - "filing_county": ${trial_court.address.county.upper()}
     - "plaintiff_names": |
-        ${comma_and_list(other_parties)}
+        ${other_parties.full_names()}
     - "defendant_names": |
-        ${comma_and_list(users)}
+        ${users.full_names()}
     - "case_number": ${case_number}
     - "paragraph_number_23": ${ answer_responses[22].para if complaint_labeled else '' }
     - "paragraph_letter_23": ${ answer_responses[22].sub if complaint_labeled else '' }
