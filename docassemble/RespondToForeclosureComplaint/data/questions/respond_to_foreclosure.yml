@@ -920,7 +920,7 @@ subquestion: |
 id: defenses description
 continue button field: defense_entry_page
 question: |
-  Describe any defenses you have in your own words. 
+  Describe defenses
 subquestion: |  
   % if assorted_defenses.any_true():
   You may need to provide facts that support your defenses. 
@@ -936,8 +936,8 @@ subquestion: |
   
   **Note:** If you need more space, you can enter more text on an upcoming screen. Select **Yes** when asked if you want to add an additional page to explain.
 fields:
-  - label: Defenses
-    field: defenses_description
+  - Defenses: defenses_description
+    label above field: True
     input type: area
     rows: 11
     maxlength: ${defenses_maxlength}
