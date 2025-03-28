@@ -409,7 +409,7 @@ question: |
   Are there any other plaintiffs in this case?
 subquestion: |
   % if len(other_parties.elements) >= 1:  
-  So far you have told us about ${other_parties.full_names()}.
+  So far you have told us about ${comma_and_list(other_parties)}.
   % endif
 fields:
   - no label: other_parties.there_is_another
@@ -497,7 +497,7 @@ question: |
     Is anyone else on your side of the foreclosure case?
 subquestion: |
   % if len(users.elements) > 1:  
-  So far you have told us about ${users.full_names()}.
+  So far you have told us about ${comma_and_list(users)}.
   % else:
   If there are other defendants besides you, click **Yes**.
   % endif
@@ -920,7 +920,7 @@ subquestion: |
 id: defenses description
 continue button field: defense_entry_page
 question: |
-  Describe defenses
+  Describe any defenses you have in your own words. 
 subquestion: |  
   % if assorted_defenses.any_true():
   You may need to provide facts that support your defenses. 
@@ -936,8 +936,8 @@ subquestion: |
   
   **Note:** If you need more space, you can enter more text on an upcoming screen. Select **Yes** when asked if you want to add an additional page to explain.
 fields:
-  - Defenses: defenses_description
-    label above field: True
+  - label: Defenses
+    field: defenses_description
     input type: area
     rows: 11
     maxlength: ${defenses_maxlength}
@@ -1067,7 +1067,7 @@ continue button field: delivery_intro
 question: |
   Send your forms to all other parties
 subquestion: |
-  You will need to deliver a copy of your forms to these other parties: ${delivery_parties.full_names()}.
+  You will need to deliver a copy of your forms to these other parties: ${comma_and_list(delivery_parties)}.
 
   You must send a copy of your forms to each of them.
 
