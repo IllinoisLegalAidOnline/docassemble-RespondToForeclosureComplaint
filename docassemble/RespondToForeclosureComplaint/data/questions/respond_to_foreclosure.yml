@@ -409,7 +409,7 @@ question: |
   Are there any other plaintiffs in this case?
 subquestion: |
   % if len(other_parties.elements) >= 1:  
-  So far you have told us about ${comma_and_list(other_parties)}.
+  So far you have told us about ${other_parties.full_names()}.
   % endif
 fields:
   - no label: other_parties.there_is_another
@@ -497,7 +497,7 @@ question: |
     Is anyone else on your side of the foreclosure case?
 subquestion: |
   % if len(users.elements) > 1:  
-  So far you have told us about ${comma_and_list(users)}.
+  So far you have told us about ${users.full_names()}.
   % else:
   If there are other defendants besides you, click **Yes**.
   % endif
@@ -1067,7 +1067,7 @@ continue button field: delivery_intro
 question: |
   Send your forms to all other parties
 subquestion: |
-  You will need to deliver a copy of your forms to these other parties: ${comma_and_list(delivery_parties)}.
+  You will need to deliver a copy of your forms to these other parties: ${delivery_parties.full_names()}.
 
   You must send a copy of your forms to each of them.
 
