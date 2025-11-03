@@ -67,7 +67,7 @@ code: |
   whats_next
   accept_terms
   lawsuit_information
-  #challenge_service
+  challenge_service
   #more_lawsuit_information
 
   if complaint_received is None:
