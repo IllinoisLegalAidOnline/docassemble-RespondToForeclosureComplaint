@@ -1,7 +1,7 @@
  metadata:
   title: Respond to a mortgage foreclosure complaint
   short title: Respond to a foreclosure
-  comment: This program makes the forms to respond to a mortgage foreclosure complaint.
+  comment: This Easy Form makes the forms to respond to a mortgage foreclosure complaint.
   authors:
     - Vivian McNaughton
     - Matt Newsted
@@ -30,7 +30,6 @@ objects:
   - other_parties[i].carrier: ALAddress
   - answer_responses: DAList.using(object_type=DAObject, complete_attribute=['complete'], there_are_any=True)
   - defenses: DAList.using(object_type=Thing, complete_attribute='complete', there_are_any=True)
-  - court_list: ALCourtLoader.using(file_name='docassemble.ILAO:data/sources/il_courts.xlsx')
 ---
 mandatory: True
 objects:
@@ -82,7 +81,7 @@ code: |
   nav.set_section('section_case_info')
   users.gather()
   other_parties.gather()
-  trial_court
+  filing_county
   case_number
   foreclosure_property.address
   set_progress(20)
@@ -240,7 +239,7 @@ subquestion: |
   
   A *Mortgage Foreclosure Appearance & Answer* tells the court and the other parties that you are participating in the court case and how you respond to what is written in the Complaint.
   
-  To learn more, read ILAO's article about [**responding to a mortgage foreclosure case**](https://www.illinoislegalaid.org/legal-information/responding-mortgage-foreclosure-case).
+  To learn more, see ILAO's article on [**responding to a mortgage foreclosure case**](https://www.illinoislegalaid.org/node/31296).
 field: sees_nav_bar
 ---
 id: instructions
@@ -293,11 +292,11 @@ question: |
 subquestion: |
   The *Mortgage Foreclosure Appearance & Answer* tells the court you know about the foreclosure case and whether you agree or disagree with what was said in the Mortgage Foreclosure Complaint. It also allows you to tell the court what defenses you have.
   
-  You must file within 30 days after you got the Mortgage Foreclosure Complaint. If you do not respond by then, you can ask the court for an extension of time using ILAO's [**Motion to continue or extend time Easy Form**](https://www.illinoislegalaid.org/legal-information/motion-continue-or-extend-time).
+  You must file within 30 days after you got the Mortgage Foreclosure Complaint. If you do not respond by then, you can ask the court for an extension of time using ILAO's [**Motion to continue or extend time Easy Form**](https://www.illinoislegalaid.org/node/30881).
 
-  **Note:** If it has already been 30 days and a Default Judgment of Foreclosure was entered against you, you can ask the court to undo the judgment so you can participate in the case. Use ILAO's [**Vacate a default judgment of foreclosure**](https://www.illinoislegalaid.org/legal-information/vacate-default-judgment-foreclosure) program to make the forms you need.
+  **Note:** If it has already been 30 days and a Default Judgment of Foreclosure was entered against you, you can ask the court to undo the judgment so you can participate in the case. Use ILAO's [**Vacate a default judgment of foreclosure Easy Form**](https://www.illinoislegalaid.org/node/30981) to make the forms you need.
   
-  To learn more, read ILAO's article about [**responding to a mortgage foreclosure case**](https://www.illinoislegalaid.org/legal-information/responding-mortgage-foreclosure-case). 
+  To learn more, see ILAO's article on [**responding to a mortgage foreclosure case**](https://www.illinoislegalaid.org/node/31296). 
   
   If you would like help finding free or low-cost legal services in your area, use [**Get Legal Help**](https://www.illinoislegalaid.org/get-legal-help).
 ---
@@ -343,7 +342,7 @@ question: |
 subquestion: |
   You can still use this program if you are not sure if you have been served, but you may not have all the information you need to complete your forms.
 
-  You can contact the court clerk to find out if a foreclosure complaint has been filed against you. To learn more about getting court records, read ILAO's article on [**how to access your court records**](https://www.illinoislegalaid.org/node/33186).
+  You can contact the court clerk to find out if a foreclosure complaint has been filed against you. To learn more about getting court records, see ILAO's [**how to access court records FAQ**](https://www.illinoislegalaid.org/node/33186).
 
   You may want to contact a lawyer to help you with your case. If you would like help finding free or low-cost legal services in your area, use [**Get Legal Help**](https://www.illinoislegalaid.org/get-legal-help).
 ---
@@ -354,7 +353,7 @@ question: |
 subquestion: |
   You cannot use this program unless you received a Mortgage Foreclosure Complaint and Summons.
   
-  To learn more about avoiding foreclosure, read ILAO's article on [**Avoiding mortgage foreclosure**](https://www.illinoislegalaid.org/legal-information/avoiding-mortgage-foreclosure-0).
+  To learn more about avoiding foreclosure, see ILAO's article on [**Avoiding mortgage foreclosure**](https://www.illinoislegalaid.org/node/31266).
 buttons:
   - Exit: exit
   - Restart: restart
@@ -382,7 +381,7 @@ question: |
 subquestion: |
   You cannot use this program if a default judgment has been entered against you.
   
-  You may ask the court to remove the default judgment by filing a *Motion to Vacate Default Judgment of Foreclosure.* Use [**ILAO's Easy Form**](https://www.illinoislegalaid.org/legal-information/vacate-default-judgment-foreclosure) to make the forms you need. 
+  You may ask the court to remove the default judgment by filing a *Motion to Vacate Default Judgment of Foreclosure.* Use ILAO's [**Vacate default judgment of foreclosure Easy Form**](https://www.illinoislegalaid.org/node/30981) to make the forms you need. 
 
   If a default judgment has been entered against you, you may want to contact a lawyer to help you with your case. If you would like help finding free or low-cost legal services in your area, use [**Get Legal Help**](https://www.illinoislegalaid.org/get-legal-help).
 buttons:
@@ -396,7 +395,7 @@ question: |
 subquestion: |
   The deadline to respond to a Mortgage Foreclosure Complaint is 30 days after you were **{properly served}**. You can still file a *Mortgage Foreclosure Appearance & Answer*, but the judge might not excuse the delay.
 
-  If you missed this deadline a default judgment may have been entered against you. If so, you can ask the court to remove the judgment by filing a *Motion to Vacate Default Judgment of Foreclosure.* Use [**ILAO's Easy Form**](https://www.illinoislegalaid.org/legal-information/vacate-default-judgment-foreclosure) to make the forms you need.
+  If you missed this deadline a default judgment may have been entered against you. If so, you can ask the court to remove the judgment by filing a *Motion to Vacate Default Judgment of Foreclosure.* Use ILAO's [**Vacate default judgment of foreclosure Easy Form**](https://www.illinoislegalaid.org/node/30981) to make the forms you need.
 
   If a default judgment has been entered against you, you may want to contact a lawyer to help you with your case. If you would like help finding free or low-cost legal services in your area, use [**Get Legal Help**](https://www.illinoislegalaid.org/get-legal-help).
 ---
@@ -416,35 +415,14 @@ fields:
     datatype: yesnoradio
 ---
 id: trial court county
-continue button field: case_county
 question: |
   In which county was the complaint filed?
 subquestion: |
   This should be listed near the top on your court papers.
 fields:
-  - no label: trial_court_index
-    datatype: integer
+  - County: filing_county
     code: |
-      court_county_lookup()
----
-code: |
-  def court_county_lookup(lowercase=False):
-    all_court_counties = court_list._load_courts()['address_county'].items()
-    filtered_courts = [(-1, "cook")] if lowercase else [(-1, "Cook")]
-    for court in all_court_counties:
-      if court[1] != "Cook":
-        court_name = court[1].lower() if lowercase else court[1]
-        filtered_courts.append((court[0],court_name))
-    return sorted( filtered_courts, key=lambda y: y[1])
----
-depends on:
-  - trial_court_index
-code: |
-  if trial_court_index == -1:
-    trial_court = court_list.as_court('trial_court', 15)
-    trial_court.address.county = "Cook"
-  else:
-    trial_court = court_list.as_court('trial_court', trial_court_index)
+      il_county_list
 ---
 sets:
   - users[i].name.first
@@ -822,7 +800,7 @@ subquestion: |
 
   **Note:** You will have to prove your defenses in court with evidence such as documents.
 
-  To learn more about defenses to a mortgage foreclosure, read ILAO's article on [**Legal reasons to throw out a mortgage foreclosure lawsuit**](https://www.illinoislegalaid.org/legal-information/legal-reasons-throw-out-mortgage-foreclosure-lawsuit).
+  To learn more about defenses to a mortgage foreclosure, see ILAO's article on [**Legal reasons to throw out a mortgage foreclosure lawsuit**](https://www.illinoislegalaid.org/node/31271).
 ---
 id: assorted defenses check
 question: |
@@ -906,16 +884,7 @@ subquestion: |
   
   This does not necessarily mean you have a defense to your mortgage foreclosure case. Also, you might have a defense not listed in the previous screen.
 
-  To learn more about defenses to a mortgage foreclosure, read ILAO's article on [**Legal reasons to throw out a mortgage foreclosure lawsuit**](https://www.illinoislegalaid.org/legal-information/legal-reasons-throw-out-mortgage-foreclosure-lawsuit).
----
-#id: any defenses
-#question: |
-#  Do you have any other defenses?
-#subquestion: |  
-#  You can enter details about your defenses on the next screen. 
-#fields:
-#  Any defenses?: has_defenses
-#  datatype: yesnoradio
+  To learn more about defenses to a mortgage foreclosure, see ILAO's article on [**Legal reasons to throw out a mortgage foreclosure lawsuit**](https://www.illinoislegalaid.org/node/31271).
 ---
 id: defenses description
 continue button field: defense_entry_page
@@ -1303,96 +1272,13 @@ fields:
 ---
 template: efiling_help
 subject: |
-  **What if I need help?**
+  **What if I need help sending my forms electronically?**
 content: |  
-  If you need help delivering by email or using the e-filing service provider, you can visit a [**Legal Self-Help Center**](https://www.illinoislegalaid.org/get-legal-help/lshc-directory) or you can call or text [**Illinois Court Help**](https://www.ilcourthelp.gov) at 833-411-1121.
----
-#id: other party delivery method
-## generic object: ALIndividual
-##changed from generic object to other_parties to allow for changing answers via Back
-#question: |
-#  % if other_parties[i].is_represented:
-#  How will you send your forms to ${ other_parties[i].lawyer.name_full() }?
-#  % else:
-#  How will you send your forms to ${ other_parties[i].name_full() }?
-#  % endif
-#subquestion: |  
-#  If the other party listed an email address on the court documents, you must send the forms to them by email or through the e-filing system. You may use US mail or a delivery company, or hand delivery if you or the other party **does not** have an email address. If you are in a prison or jail, you can deliver by mail.
-#
-#  For best results, complete the Proof of Delivery section and send the forms today.
-#
-#  **Note:** If you do not know this now, be sure to add it to the Proof of Delivery section of your forms later.
-#
-#  ${ collapse_template(efiling_help) }  
-#fields:
-#  - E-filing system: other_parties[i].efm_delivery
-#    datatype: yesnowide
-#    help: |
-#      The court's e-filing system could be any approved electronic filing service provider (EFSP).
-#  - Email: other_parties[i].email_delivery
-#    datatype: yesnowide
-#  - Email address (for e-filing system or email delivery): other_parties[i].delivery_email
-#    datatype: email
-#    js show if: 
-#      val("other_parties[i].efm_delivery") == true || val("other_parties[i].email_delivery") == true
-#    required: False
-#  - US mail or delivery company (like UPS or FedEx): other_parties[i].mail_delivery
-#    datatype: yesnowide
-#  - City of mailbox or delivery company: other_parties[i].delivery_mail_city
-#    maxlength: 30
-#    show if: 
-#      variable: other_parties[i].mail_delivery
-#      is: True
-#    required: False
-#  - State of mailbox or delivery company: other_parties[i].delivery_mail_state
-#    code: |
-#      states_list()
-#    default: IL
-#    show if: 
-#      variable: other_parties[i].mail_delivery
-#      is: True
-#    required: False
-#  - Hand delivery: other_parties[i].hand_delivery
-#    datatype: yesnowide
-#    help: |
-#      You can only deliver to the party, the party's family member over 13 at their residence, the party's lawyer, or their lawyer's office.
-#  - Street address: other_parties[i].hand_delivery_address.address
-#    address autocomplete: True
-#    show if: 
-#      variable: other_parties[i].hand_delivery
-#      is: True
-#    required: False
-#  - Address line 2: other_parties[i].hand_delivery_address.unit
-#    show if: 
-#      variable: other_parties[i].hand_delivery
-#      is: True
-#    required: False
-#  - City: other_parties[i].hand_delivery_address.city
-#    show if: 
-#      variable: other_parties[i].hand_delivery
-#      is: True
-#    required: False
-#  - State: other_parties[i].hand_delivery_address.state
-#    code: |
-#      states_list()
-#    default: IL      
-#    show if: 
-#      variable: other_parties[i].hand_delivery
-#      is: True
-#    required: False
-#  - ZIP code: other_parties[i].hand_delivery_address.zip
-#    show if: 
-#      variable: other_parties[i].hand_delivery
-#      is: True
-#    required: False
-#  - By mail from a prison or jail: other_parties[i].jail_delivery
-#    datatype: yesnowide
-#  - Name of prison or jail: other_parties[i].delivery_jail_name
-#    maxlength: 40
-#    show if: 
-#      variable: other_parties[i].jail_delivery
-#      is: True
-#    required: False
+  If you need help delivering by email or using the e-filing system, you can visit a [**Legal Self-Help Center :external-link:**](https://www.illinoislegalaid.org/get-legal-help/lshc-directory). You can also contact Illinois Court Help:
+
+  * **[Visit the Illinois Court Help website :external-link:](https://www.ilcourthelp.gov/)**,
+  * <a href="tel:+18334111121">**Call (833) 411-1121 :phone:**</a>, or
+  * <a href="sms:+18334111121">**Text (833) 411-1121 :comment:**</a>.
 ---
 id: delivery time
 generic object: ALIndividual
@@ -1796,7 +1682,7 @@ attachment:
   editable: False
   pdf template file: foreclosure_appearance_answer.pdf
   fields:
-    - "filing_county": ${trial_court.address.county.upper()}
+    - "filing_county": ${filing_county.upper()}
     - "plaintiff_names": |
         ${other_parties.full_names()}
     - "all_defendant_names": |
@@ -2139,7 +2025,7 @@ attachment:
   editable: False
   pdf template file: foreclosure_defendant_signatures.pdf
   fields:
-    - "filing_county": ${trial_court.address.county.upper()}
+    - "filing_county": ${filing_county.upper()}
     - "plaintiff_names": |
         ${other_parties.full_names()}
     - "defendant_names": |
@@ -2380,7 +2266,7 @@ attachment:
   pdf template file: foreclosure_additional_defenses.pdf
   fields:
     - "preview_watermark": ${ watermark if i=='preview' else '' }
-    - "filing_county": ${trial_court.address.county.upper()}
+    - "filing_county": ${filing_county.upper()}
     - "plaintiff_names": |
         ${other_parties.full_names()}
     - "all_defendant_names": |
@@ -2412,7 +2298,7 @@ attachment:
   editable: False
   pdf template file: foreclosure_additional_answer_paragraphs.pdf
   fields:
-    - "filing_county": ${trial_court.address.county.upper()}
+    - "filing_county": ${filing_county.upper()}
     - "plaintiff_names": |
         ${other_parties.full_names()}
     - "defendant_names": |
@@ -2556,13 +2442,10 @@ review:
       % for my_var in other_parties:
         * ${ my_var.name_full() }
       % endfor
-  - Edit: 
-      - trial_court_index
-      - recompute:
-        - trial_court
+  - Edit: filing_county
     button: |
       **County where this case is filed:**
-      ${ trial_court.address.county }
+      ${ filing_county }
   - Edit: case_number
     button: |
       **Case number:**
@@ -3062,13 +2945,10 @@ review:
       % for my_var in other_parties:
         * ${ my_var.name_full() }
       % endfor
-  - Edit: 
-      - trial_court_index
-      - recompute:
-        - trial_court
+  - Edit: filing_county
     button: |
       **County where this case is filed:**
-      ${ trial_court.address.county }
+      ${ filing_county }
   - Edit: case_number
     button: |
       **Case number:**
